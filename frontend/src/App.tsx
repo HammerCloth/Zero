@@ -36,9 +36,10 @@ export default function App() {
           <Route element={<AdminRoute />}>
             <Route path="/users" element={<UsersPage />} handle={{ crumb: '用户管理' }} />
           </Route>
+          {/* 必须放在 AppLayout 子路由最后：勿用顶层 /* ，否则会与 /dashboard 抢匹配导致白屏 */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Route>
-      <Route path="/*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
