@@ -60,7 +60,7 @@ func NewRouter(cfg config.Config, db *sql.DB) (*gin.Engine, error) {
 	engine.Use(gin.Recovery())
 	engine.Use(middleware.ErrorHandler())
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.FrontendOrigin},
+		AllowOrigins:     cfg.FrontendOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,

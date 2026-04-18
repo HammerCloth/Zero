@@ -38,7 +38,7 @@ export function LoginPage() {
     setPending(true)
     try {
       await signIn(username.trim(), password, remember)
-      navigate('/dashboard', { replace: true })
+      queueMicrotask(() => navigate('/dashboard', { replace: true }))
     } catch {
       setError('用户名或密码错误')
     } finally {

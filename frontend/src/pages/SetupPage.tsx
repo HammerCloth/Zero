@@ -29,7 +29,8 @@ export function SetupPage() {
     setPending(true)
     try {
       await signUp(username.trim(), password)
-      navigate('/dashboard', { replace: true })
+      // 等 AuthContext 状态提交后再跳转，避免守卫仍认为未登录而出现白屏/重定向异常
+      queueMicrotask(() => navigate('/dashboard', { replace: true }))
     } catch (err) {
       setError(err instanceof Error ? err.message : '初始化失败')
     } finally {

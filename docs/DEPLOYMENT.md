@@ -163,7 +163,7 @@ CADDY_SITE=www.example.com,example.com
 chmod 600 .env
 ```
 
-- `FRONTEND_ORIGIN`：必须与浏览器地址栏一致（含 `https://`）。
+- `FRONTEND_ORIGIN`：必须与浏览器地址栏一致（含 `https://`）。若同时存在 **www 与根域**访问，可写多个来源（**英文逗号分隔**），例如：`https://www.mimixia.online,https://mimixia.online`。只配一个而用户访问另一个时，登录后接口会因 **CORS** 失败，页面可能白屏。
 - `CADDY_SITE`：只写域名；Caddy 将申请 Let’s Encrypt（需域名解析到本机且 80/443 可达）。
 - 勿将 `.env` 提交到 Git（`zero/.gitignore` 已忽略）。
 
