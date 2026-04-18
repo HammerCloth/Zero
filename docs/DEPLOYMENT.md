@@ -152,6 +152,13 @@ JWT_REFRESH_SECRET=第二个随机串
 CADDY_SITE=app.example.com
 ```
 
+若用户既可能访问 **`www`** 又可能访问**根域**，建议**同时写在 `CADDY_SITE`**（英文逗号分隔，无多余空格），否则只配一侧时，访问另一侧可能**不匹配站点**：
+
+```env
+FRONTEND_ORIGIN=https://www.example.com
+CADDY_SITE=www.example.com,example.com
+```
+
 ```bash
 chmod 600 .env
 ```
@@ -183,6 +190,8 @@ cd ..
 ---
 
 ## 9. 启动服务
+
+**必须先有 `frontend/dist/`（含 `index.html`）。** 该目录**不会**随 `git clone` / `git pull` 出现（前端构建产物在 `.gitignore` 里）。若跳过 §7 直接起容器，浏览器往往**白屏、空白或 404**。
 
 ```bash
 cd /opt/你的仓库名/zero
@@ -226,6 +235,7 @@ docker compose up -d --build
 
 | 现象 | 排查 |
 |------|------|
+| **打不开 / 白屏 / 一直转圈** | **先看 `ls frontend/dist/index.html`**：不存在则必须先 `cd frontend && npm ci && npm run build`（或 `./scripts/deploy.sh`）。再查：`docker compose ps`；**`CADDY_SITE` / `FRONTEND_ORIGIN` 是否与浏览器地址一致**（`www` 与根域是否都写入 `CADDY_SITE`）；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP。在 **`zero` 目录**执行 **`./scripts/diagnose.sh`** 可快速汇总上述检查。 |
 | 网页打不开 | `docker compose ps`；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP |
 | **502**，日志含 `lookup backend` / `127.0.0.11` / `server misbehaving` | **先确认后端在跑**：`docker compose ps`、`docker compose logs backend`。再在 Caddy 容器内测解析：`docker exec zero-caddy wget -qO- http://backend:8080/healthz`。若 `backend` 解析失败，在同一目录执行 `docker compose down && docker compose up -d --build`（勿单独用 `docker run` 起 Caddy）。勿在 `/etc/docker/daemon.json` 里把容器 DNS 改成仅公网 DNS，否则会破坏服务名解析。 |
 | 登录后 401 / CORS | `FRONTEND_ORIGIN` 是否与浏览器地址完全一致 |
@@ -268,6 +278,7 @@ JWT_REFRESH_SECRET=...
 |------|------|----------|
 | **`scripts/bootstrap-ubuntu.sh`** | 仅在**全新 Ubuntu 22.04/24.04** 上**一次性**安装 Docker、Node 22、ufw（需 **root/sudo**） | `sudo bash scripts/bootstrap-ubuntu.sh` |
 | **`scripts/deploy.sh`** | 在已有 **`zero/.env`** 的前提下：**构建前端 + `docker compose up`**；可选先 `git pull` | `cd /path/to/zero && ./scripts/deploy.sh` 或 `GIT_PULL=1 ./scripts/deploy.sh` |
+| **`scripts/diagnose.sh`** | **排查「打不开 / 白屏 / 502」**：检查 `frontend/dist`、容器状态、Caddy/后端日志、caddy→backend 连通性 | `cd /path/to/zero && ./scripts/diagnose.sh` |
 
 **推荐流程：**
 
