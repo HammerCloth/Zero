@@ -1,9 +1,16 @@
+# 显式网络，避免 Caddy 内解析不到服务名 backend（127.0.0.11 DNS）
+networks:
+  app:
+    driver: bridge
+
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: zero-backend
+    networks:
+      - app
     environment:
       APP_ENV: production
       APP_PORT: "8080"
@@ -20,6 +27,8 @@ services:
     container_name: zero-caddy
     depends_on:
       - backend
+    networks:
+      - app
     ports:
       - "80:80"
       - "443:443"

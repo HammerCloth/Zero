@@ -47,7 +47,15 @@ func NewRouter(cfg config.Config, db *sql.DB) (*gin.Engine, error) {
 	dashboardHandler := NewDashboardHandler(dashboardService)
 	exportHandler := NewExportHandler(exportService)
 
+	if cfg.AppEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	engine := gin.New()
+	if cfg.AppEnv == "production" {
+		// 反代（如 Caddy）在 Docker 网段内，避免默认「信任所有代理」
+		_ = engine.SetTrustedProxies([]string{"127.0.0.1", "172.16.0.0/12", "10.0.0.0/8"})
+	}
 	engine.Use(gin.Logger())
 	engine.Use(gin.Recovery())
 	engine.Use(middleware.ErrorHandler())
