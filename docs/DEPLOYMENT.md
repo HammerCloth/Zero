@@ -237,6 +237,7 @@ docker compose up -d --build
 |------|------|
 | **打不开 / 白屏 / 一直转圈** | **先看 `ls frontend/dist/index.html`**：不存在则必须先 `cd frontend && npm ci && npm run build`（或 `./scripts/deploy.sh`）。再查：`docker compose ps`；**`CADDY_SITE` / `FRONTEND_ORIGIN` 是否与浏览器地址一致**（`www` 与根域是否都写入 `CADDY_SITE`）；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP。在 **`zero` 目录**执行 **`./scripts/diagnose.sh`** 可快速汇总上述检查。 |
 | 网页打不开 | `docker compose ps`；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP |
+| **感觉 Caddy「没监听到」域名 / 证书不对** | Caddy **按站点块匹配浏览器 `Host`**，不是「任意域名进来都算」。**`.env` 里 `CADDY_SITE` 必须包含你实际访问的主机名**（例如只配了根域却访问 `www`，或相反，会不匹配）。建议同时写：`CADDY_SITE=www.mimixia.online,mimixia.online`，且 **`FRONTEND_ORIGIN` 与地址栏一致**。核对 DNS：**域名拼写**（常见笔误 `online` 写成 `onlne`）、A 记录是否指向本机公网 IP。改 `.env` 后执行 `docker compose up -d --force-recreate`。已开启访问日志：`docker compose logs -f caddy`，请求到达时会有访问记录；**若完全无新日志**，说明流量未到本机（DNS/防火墙/端口）。 |
 | **502**，日志含 `lookup backend` / `127.0.0.11` / `server misbehaving` | **先确认后端在跑**：`docker compose ps`、`docker compose logs backend`。再在 Caddy 容器内测解析：`docker exec zero-caddy wget -qO- http://backend:8080/healthz`。若 `backend` 解析失败，在同一目录执行 `docker compose down && docker compose up -d --build`（勿单独用 `docker run` 起 Caddy）。勿在 `/etc/docker/daemon.json` 里把容器 DNS 改成仅公网 DNS，否则会破坏服务名解析。 |
 | 登录后 401 / CORS | `FRONTEND_ORIGIN` 是否与浏览器地址完全一致 |
 | HTTPS 证书失败 | 域名是否解析到本机；**80** 是否对公网开放（Let’s Encrypt HTTP-01） |

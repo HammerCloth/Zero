@@ -1,7 +1,13 @@
 # 站点地址：本地默认 :80；生产可设为域名（如 example.com），Caddy 将自动申请 HTTPS。
 # 通过环境变量 CADDY_SITE 覆盖，docker-compose 已传入 ${CADDY_SITE:-:80}
 # 多个主机名用英文逗号分隔，例如：www.example.com,example.com（须与 .env 中 FRONTEND_ORIGIN 一致）
+# 浏览器里的域名必须与下列站点列表一致，否则 Caddy 不会走这个站点（表现为连不上或证书错误）
 {$CADDY_SITE} {
+  log {
+    output stdout
+    format console
+  }
+
   encode gzip
 
   handle /api/* {
