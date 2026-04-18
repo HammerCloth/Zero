@@ -30,8 +30,8 @@ export function EventStatsPage() {
       try {
         const data = await api.getEventStats(selectedYear)
         if (!cancelled) {
-          setRows(data.by_category)
-          setGrandTotal(data.grand_total)
+          setRows(data.by_category ?? [])
+          setGrandTotal(data.grand_total ?? 0)
         }
       } catch (e) {
         if (!cancelled) {

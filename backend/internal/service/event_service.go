@@ -38,6 +38,9 @@ func (s *EventService) StatsByYear(userID string, year int) (*EventStatsResult, 
 	if err != nil {
 		return nil, err
 	}
+	if stats == nil {
+		stats = []repository.EventCategoryStat{}
+	}
 	return &EventStatsResult{
 		ByCategory: stats,
 		GrandTotal: grandTotal,
