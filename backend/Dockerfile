@@ -21,6 +21,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /out/zero-backend /usr/local/bin/zero-backend
+# ApplyMigrations 使用相对路径 migrations/（相对进程工作目录）
+WORKDIR /app
+COPY --from=build /src/migrations ./migrations
 
 ENV APP_ENV=production
 EXPOSE 8080

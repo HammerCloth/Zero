@@ -53,7 +53,8 @@ npm test
 
 ## Docker 部署（Caddy + 后端）
 
-更完整的分步说明（含服务器准备、`.env`、防火墙与域名）见 **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**。
+更完整的分步说明（**以 Ubuntu 24.04 LTS 为主线**，含 Docker、Node 22、ufw、`.env`、域名）见 **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**；Rocky/Alma 与 CentOS 7 见文档附录。  
+一键构建并启动：`cd zero && ./scripts/deploy.sh`（需已配置 `.env`）；新机装依赖：`sudo bash scripts/bootstrap-ubuntu.sh`。
 
 1. **构建前端**（Caddy 挂载 `frontend/dist`）：
 
