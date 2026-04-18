@@ -1,18 +1,53 @@
-import { Link, useMatches } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
-export type RouteCrumb = {
-  crumb?: string
+/** 与 BrowserRouter 兼容：不使用 useMatches（需 Data Router） */
+function buildCrumbs(pathname: string): { label: string; to: string }[] {
+  if (pathname === '/dashboard') {
+    return [{ label: '总览', to: '/dashboard' }]
+  }
+  if (pathname === '/accounts') {
+    return [{ label: '账户', to: '/accounts' }]
+  }
+  if (pathname === '/profile') {
+    return [{ label: '我的', to: '/profile' }]
+  }
+  if (pathname === '/events/stats') {
+    return [{ label: '大事记统计', to: '/events/stats' }]
+  }
+  if (pathname === '/users') {
+    return [{ label: '用户管理', to: '/users' }]
+  }
+
+  if (pathname === '/snapshots') {
+    return [{ label: '快照', to: '/snapshots' }]
+  }
+  if (pathname === '/snapshots/new') {
+    return [
+      { label: '快照', to: '/snapshots' },
+      { label: '新建快照', to: '/snapshots/new' },
+    ]
+  }
+
+  if (/^\/snapshots\/[^/]+\/edit$/.test(pathname)) {
+    return [
+      { label: '快照', to: '/snapshots' },
+      { label: '编辑快照', to: pathname },
+    ]
+  }
+
+  if (/^\/snapshots\/[^/]+$/.test(pathname)) {
+    return [
+      { label: '快照', to: '/snapshots' },
+      { label: '详情', to: pathname },
+    ]
+  }
+
+  return []
 }
 
 export function Breadcrumbs() {
-  const matches = useMatches() as Array<{ id: string; pathname: string; handle: unknown }>
-
-  const crumbs = matches
-    .map((m) => {
-      const h = m.handle as RouteCrumb | undefined
-      return h?.crumb ? { label: h.crumb, to: m.pathname } : null
-    })
-    .filter((x): x is { label: string; to: string } => x !== null)
+  const { pathname } = useLocation()
+  const crumbs = buildCrumbs(pathname)
 
   if (crumbs.length === 0) {
     return null
