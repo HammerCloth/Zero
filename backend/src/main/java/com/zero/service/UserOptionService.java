@@ -18,7 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class UserOptionService {
 
-  private static final Pattern KEY_PATTERN = Pattern.compile("^[a-z][a-z0-9_]{0,63}$");
+  /** 与默认种子（如 A、B、shared）一致：字母开头，仅含字母数字与下划线。 */
+  private static final Pattern KEY_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]{0,63}$");
 
   private final UserOptionMapper userOptionMapper;
   private final AccountMapper accountMapper;
