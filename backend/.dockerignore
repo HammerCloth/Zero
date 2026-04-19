@@ -1,6 +1,5 @@
+target
 .git
-*.md
-data/
-*.db
-.env
-.env.*
+.idea
+*.iml
+.jdk

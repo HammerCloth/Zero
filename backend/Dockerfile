@@ -1,31 +1,12 @@
-# CGO required for github.com/mattn/go-sqlite3
-FROM golang:1.22-bookworm AS build
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends gcc libc6-dev \
-  && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /src
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-
-RUN CGO_ENABLED=1 GOOS=linux go build -o /out/zero-backend ./cmd/server
-
-FROM debian:bookworm-slim
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /out/zero-backend /usr/local/bin/zero-backend
-# ApplyMigrations 使用相对路径 migrations/（相对进程工作目录）
+# syntax=docker/dockerfile:1
+FROM eclipse-temurin:26-jdk-alpine AS build
 WORKDIR /app
-COPY --from=build /src/migrations ./migrations
+COPY . .
+RUN chmod +x mvnw && ./mvnw -q -DskipTests package
 
-ENV APP_ENV=production
+FROM eclipse-temurin:26-jre-alpine
+WORKDIR /app
+ENV JAVA_OPTS="-Xmx256m -Xms64m"
+COPY --from=build /app/target/zero-backend-*.jar /app/app.jar
 EXPOSE 8080
-
-ENTRYPOINT ["/usr/local/bin/zero-backend"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

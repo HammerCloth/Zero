@@ -7,12 +7,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 echo "========== 1. 前端静态文件（最常见：git pull 后未构建，此处为空）=========="
-if [[ -f frontend/dist/index.html ]]; then
-  echo "[OK] frontend/dist/index.html 存在"
-  ls -la frontend/dist | head -8
+if [[ -f frontend-vue/dist/index.html ]]; then
+  echo "[OK] frontend-vue/dist/index.html 存在"
+  ls -la frontend-vue/dist | head -8
 else
-  echo "[失败] 没有 frontend/dist/index.html"
-  echo "       修复: cd frontend && npm ci && npm run build && cd .."
+  echo "[失败] 没有 frontend-vue/dist/index.html"
+  echo "       修复: cd frontend-vue && npm ci && npm run build && cd .."
   echo "       然后: docker compose up -d --build"
 fi
 

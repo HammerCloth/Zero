@@ -13,8 +13,8 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-if [[ ! -d frontend ]]; then
-  echo "错误：未找到 frontend 目录（应在 zero 目录下执行本脚本）"
+if [[ ! -d frontend-vue ]]; then
+  echo "错误：未找到 frontend-vue 目录（应在 zero 目录下执行本脚本）"
   exit 1
 fi
 
@@ -24,7 +24,7 @@ if [[ "${GIT_PULL:-0}" == "1" ]]; then
 fi
 
 echo "==> 构建前端 (npm ci && npm run build)..."
-(cd frontend && npm ci && npm run build)
+(cd frontend-vue && npm ci && npm run build)
 
 echo "==> 启动 / 更新 Docker 服务..."
 docker compose up -d --build
