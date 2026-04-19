@@ -1,7 +1,8 @@
 # api Specification
 
 ## Purpose
-TBD - created by archiving change asset-manager. Update Purpose after archive.
+
+汇总性 REST 约定：所有业务接口位于 **`/api/v1`**。细分能力见 `auth-api`、`user-api`、`account-api`、`snapshot-api`、`dashboard-api`、`event-api`、`export-api`、`settings-api` 等独立规格。
 ## Requirements
 ### Requirement: RESTful API structure
 The system SHALL expose a RESTful API for all operations.
@@ -122,14 +123,29 @@ The system SHALL provide dashboard data API endpoints.
 
 #### Scenario: GET /api/v1/dashboard/monthly-growth
 - **WHEN** authenticated client GETs /api/v1/dashboard/monthly-growth?year=2024
-- **THEN** system returns array of {month, change} for bar chart
+- **THEN** system returns points with `month`, `change`, `cumulative_change`
+
+#### Scenario: GET /api/v1/dashboard/stacked-by-type
+- **WHEN** authenticated client GETs /api/v1/dashboard/stacked-by-type?range=1y
+- **THEN** system returns stacked series by account type per snapshot date
+
+#### Scenario: GET /api/v1/dashboard/account-trends
+- **WHEN** authenticated client GETs /api/v1/dashboard/account-trends?range=1y
+- **THEN** system returns per-account balance series for active accounts
 
 ### Requirement: Event statistics endpoint
 The system SHALL provide event statistics API endpoint.
 
 #### Scenario: GET /api/v1/events/stats
 - **WHEN** authenticated client GETs /api/v1/events/stats?year=2024
-- **THEN** system returns {by_category: [{category, total, count}], grand_total}
+- **THEN** system returns `year`, `byCategory` (map), `grandTotal`, `countByCategory` (map)
+
+### Requirement: Settings endpoints
+The system SHALL provide per-user configurable option lists (account types, owners, event categories).
+
+#### Scenario: GET /api/v1/settings/options
+- **WHEN** authenticated client GETs /api/v1/settings/options
+- **THEN** system returns grouped options with key, label, sort_order, enabled
 
 ### Requirement: Export endpoint
 The system SHALL provide data export API endpoint.

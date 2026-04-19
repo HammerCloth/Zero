@@ -1,7 +1,8 @@
 # dashboard-page Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+Vue 仪表盘路由 `/dashboard`：展示净资产、趋势、构成、月度变化、堆叠与按账户趋势等图表；数据来自 `/api/v1/dashboard/*` 与 `settingsStore` 标签映射；支持导出 CSV。
 ## Requirements
 ### Requirement: 仪表盘页面
 系统 SHALL 提供仪表盘页面 /dashboard 作为登录后的默认首页。

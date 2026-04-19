@@ -1,63 +1,79 @@
 # dashboard-api Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+定义当前用户净资产仪表盘所需的只读 JSON API（Spring Boot，`/api/v1/dashboard`）。所有端点需已认证；数据按 **当前登录用户的 `user_id`** 隔离。
+
 ## Requirements
+
 ### Requirement: 汇总数据
-系统 SHALL 提供 GET /api/dashboard/summary 端点返回当前用户的资产汇总。
+
+系统 SHALL 提供 `GET /api/v1/dashboard/summary` 返回当前用户的资产汇总。
 
 #### Scenario: 获取汇总
-- **WHEN** GET /api/dashboard/summary
-- **THEN** 返回 200 和 `{"netWorth": 100000, "monthlyChange": 5000, "annualChange": 20000, "annualizedReturn": 0.12}`
+
+- **WHEN** `GET /api/v1/dashboard/summary`
+- **THEN** 返回 200 和 `{"netWorth": number, "monthlyChange": number, "annualChange": number, "annualizedReturn": number}`
 
 #### Scenario: 无快照时
-- **WHEN** GET /api/dashboard/summary 用户无快照
-- **THEN** 返回 200 和 `{"netWorth": 0, "monthlyChange": 0, "annualChange": 0, "annualizedReturn": 0}`
+
+- **WHEN** 用户无快照
+- **THEN** 返回 200 且各数值为 0（或等价约定）
 
 ### Requirement: 趋势数据
-系统 SHALL 提供 GET /api/dashboard/trend 端点返回净资产趋势数据点。
 
-#### Scenario: 默认全部数据
-- **WHEN** GET /api/dashboard/trend
-- **THEN** 返回 200 和 `{"points": [{"date": "2024-01-01", "netWorth": 100000}]}`
+系统 SHALL 提供 `GET /api/v1/dashboard/trend` 返回净资产趋势点。
 
-#### Scenario: 按范围筛选
-- **WHEN** GET /api/dashboard/trend?range=1y
-- **THEN** 返回最近一年的数据点
+#### Scenario: 范围参数
 
-#### Scenario: 支持的范围
-- **WHEN** range 参数
-- **THEN** SHALL 支持 3m/6m/1y/all
+- **WHEN** `GET /api/v1/dashboard/trend?range=1y`（或 `3m` / `6m` / `all`）
+- **THEN** 返回 200 和 `{"points": [{"date": "YYYY-MM-DD", "netWorth": number}]}`
 
 ### Requirement: 资产构成
-系统 SHALL 提供 GET /api/dashboard/composition 端点返回资产按类型和归属的分布。
+
+系统 SHALL 提供 `GET /api/v1/dashboard/composition` 返回最新快照上按类型与归属的分布。
 
 #### Scenario: 获取构成
-- **WHEN** GET /api/dashboard/composition
-- **THEN** 返回 200 和 `{"byType": {"cash": 10000, "fund": 50000}, "byOwner": {"A": 30000, "B": 30000}}`
+
+- **WHEN** `GET /api/v1/dashboard/composition`
+- **THEN** 返回 200 和 `{"byType": {...}, "byOwner": {...}}`（值为金额）
 
 ### Requirement: 月度增长
-系统 SHALL 提供 GET /api/dashboard/monthly-growth 端点返回指定年份每月的净资产变化。
 
-#### Scenario: 获取当年
-- **WHEN** GET /api/dashboard/monthly-growth
-- **THEN** 返回 200 和 `{"year": 2024, "points": [{"month": "01", "change": 5000}]}`
+系统 SHALL 提供 `GET /api/v1/dashboard/monthly-growth` 返回指定年份每月净资产变化。
 
-#### Scenario: 指定年份
-- **WHEN** GET /api/dashboard/monthly-growth?year=2023
-- **THEN** 返回 2023 年的月度数据
+#### Scenario: 当年与累计
 
-### Requirement: 净资产计算
-净资产 SHALL 计算为所有快照明细项 balance 之和，其中 credit 类型账户余额为负数。
+- **WHEN** `GET /api/v1/dashboard/monthly-growth` 或 `?year=2024`
+- **THEN** 返回 200 和 `{"year": number, "points": [{"month": "01"|...|"12", "change": number, "cumulativeChange": number}]}`，其中 `cumulativeChange` 为该年 1 月起至该月的 `change` 累加（含当月）
 
-#### Scenario: 计算示例
-- **WHEN** 快照包含 cash:50000、credit:-10000
-- **THEN** netWorth = 50000 + (-10000) = 40000
+### Requirement: 按类型堆叠趋势
 
-### Requirement: 年化收益率
-年化收益率 SHALL 基于最早和最新快照计算，公式为 `(最新净资产/最早净资产)^(365/天数) - 1`。
+系统 SHALL 提供 `GET /api/v1/dashboard/stacked-by-type`，在指定 `range` 内对每个快照日期返回按**账户类型**拆分的净资产分量，供堆叠面积图使用。
 
-#### Scenario: 不足一年
-- **WHEN** 快照跨度 180 天，从 100000 增长到 110000
-- **THEN** annualizedReturn ≈ 0.21（年化 21%）
+#### Scenario: 有快照
 
+- **WHEN** 用户有快照且 `range` 合法
+- **THEN** 返回 200 和 `{"points": [{"date": "YYYY-MM-DD", "byType": {"cash": number, ...}}]}`
+
+#### Scenario: 无快照
+
+- **WHEN** 用户无快照
+- **THEN** 返回 200 且 `points` 为空数组
+
+### Requirement: 按账户余额趋势
+
+系统 SHALL 提供 `GET /api/v1/dashboard/account-trends`，返回每个**活跃**账户在指定 `range` 下的余额时间序列。
+
+#### Scenario: 多账户
+
+- **WHEN** 存在多个活跃账户与快照
+- **THEN** 返回 200 和 `{"accounts": [{"accountId", "name", "type", "points": [{"date", "balance"}]}]}`（停用账户默认不包含）
+
+### Requirement: 净资产与负债口径
+
+负债类账户（如 `credit`）在汇总与分量计算中 SHALL 按业务约定的符号参与净资产（与 `BalanceLogic` 一致）。
+
+## Notes
+
+- `range` 语义与 `trend` 一致：`3m` / `6m` / `1y` / `all`（缺省行为以实现为准）。

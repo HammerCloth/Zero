@@ -1,13 +1,14 @@
 # event-page Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+大事记统计视图，路由 **`/events`**；数据来自 `GET /api/v1/events/stats` 与 `settingsStore` 分类标签；支持按年查看与图表展示。
 ## Requirements
 ### Requirement: 大事记统计页
-系统 SHALL 提供大事记统计页 /events/stats，显示年度大事记支出统计。
+系统 SHALL 提供大事记统计页 `/events`，显示年度大事记支出统计。
 
 #### Scenario: 默认当年
-- **WHEN** 访问 /events/stats
+- **WHEN** 访问 `/events`
 - **THEN** 显示当年的大事记统计
 
 #### Scenario: 切换年份

@@ -1,13 +1,14 @@
 # export-api Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+导出当前用户数据为 CSV，前缀 **`/api/v1/export`**。
 ## Requirements
 ### Requirement: 导出 CSV
-系统 SHALL 提供 GET /api/export/csv 端点下载所有快照数据的 CSV 文件。
+系统 SHALL 提供 GET /api/v1/export/csv 端点下载所有快照数据的 CSV 文件。
 
 #### Scenario: 导出成功
-- **WHEN** GET /api/export/csv
+- **WHEN** GET /api/v1/export/csv
 - **THEN** 返回 200，Content-Type 为 text/csv，Content-Disposition 为 attachment; filename="snapshots.csv"
 
 #### Scenario: CSV 格式

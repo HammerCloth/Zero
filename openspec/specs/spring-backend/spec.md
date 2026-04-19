@@ -1,7 +1,8 @@
 # spring-backend Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+Spring Boot 3 后端：REST API 前缀 **`/api/v1`**，SQLite + Flyway，JWT 认证；与 `docker-compose` 中 Caddy 反代 `/api` 联调。
 ## Requirements
 ### Requirement: Maven 项目结构
 系统 SHALL 使用 Maven 构建 Spring Boot 3 项目，包含标准目录结构：src/main/java、src/main/resources、src/test/java。

@@ -1,7 +1,9 @@
 # vue-frontend Specification
 
 ## Purpose
-TBD - created by archiving change spring-vue-rewrite. Update Purpose after archive.
+
+Vue 3 + Vite + TypeScript 单页应用；生产环境由 Caddy 托管静态资源；API 前缀为 **`/api/v1`**。使用 **Bearer** `Authorization`（`access_token` 存 `localStorage`）与 Cookie 刷新配合，见 `src/api/http.ts`。
+
 ## Requirements
 ### Requirement: Vue 3 项目结构
 前端 SHALL 使用 Vue 3 + Vite + TypeScript 构建，包含标准目录结构：src/views、src/components、src/stores、src/api、src/router。
@@ -29,14 +31,14 @@ TBD - created by archiving change spring-vue-rewrite. Update Purpose after archi
 
 #### Scenario: 状态持久化
 - **WHEN** 用户刷新页面
-- **THEN** 通过 refresh token 恢复登录状态
+- **THEN** 通过 refresh token（Cookie）与 `localStorage` 中的 access_token 协作恢复会话（见 `http.ts`）
 
 ### Requirement: Axios HTTP 客户端
-前端 SHALL 使用 Axios 封装 HTTP 请求，自动附加 Authorization 头，处理 401 自动刷新令牌。
+前端 SHALL 使用 Axios 封装 HTTP 请求，自动附加 `Authorization: Bearer <access_token>`，处理 401 时调用刷新。
 
 #### Scenario: 令牌刷新
 - **WHEN** access_token 过期，API 返回 401
-- **THEN** 自动调用 /api/auth/refresh，成功后重试原请求
+- **THEN** 自动调用 `POST /api/v1/auth/refresh`（`withCredentials`），成功后重试原请求
 
 #### Scenario: 刷新失败
 - **WHEN** refresh_token 也过期
