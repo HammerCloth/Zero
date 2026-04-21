@@ -36,7 +36,21 @@
 #### Scenario: 获取构成
 
 - **WHEN** `GET /api/v1/dashboard/composition`
-- **THEN** 返回 200 和 `{"byType": {...}, "byOwner": {...}}`（值为金额）
+- **THEN** 返回 200 和 `{"byType": {...}, "byOwner": {...}, "byTypeAccounts": {...}}`（`byType` / `byOwner` 为金额聚合；`byTypeAccounts` 为类型 key → 账户 id → 金额，与 `byType` 及 `BalanceLogic` 口径一致）
+
+### Requirement: 按类型分账户的构成数据
+
+`GET /api/v1/dashboard/composition` 响应中的 **`byTypeAccounts`** SHALL 表示**最新快照**下每个 **账户类型** 内各 **账户** 的金额（与 `byType` 聚合一致，负债类型符号与 `BalanceLogic` 一致）。响应 SHALL 已认证且按当前 `user_id` 隔离。
+
+#### Scenario: 扩展 composition 响应
+
+- **WHEN** `GET /api/v1/dashboard/composition`
+- **THEN** 返回 200，且在保留 `byType` 与 `byOwner` 的前提下包含 `byTypeAccounts`（类型 key → 账户 id → 金额），供前端绘制「类型内账户占比」
+
+#### Scenario: 无快照
+
+- **WHEN** 用户无快照
+- **THEN** 返回 200，`byType`、`byOwner` 与 `byTypeAccounts` 均为空映射或等价且不报错
 
 ### Requirement: 月度增长
 

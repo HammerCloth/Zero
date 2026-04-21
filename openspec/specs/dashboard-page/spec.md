@@ -12,11 +12,11 @@ Vue 仪表盘路由 `/dashboard`：展示净资产、趋势、构成、月度变
 - **THEN** 跳转到 /dashboard
 
 ### Requirement: 指标卡片
-仪表盘 SHALL 显示 4 个指标卡片：当前净资产、本期变化、年初至今、年化收益率。
+仪表盘 SHALL 在「资产概览」区域展示当前净资产、本期变化、年初至今变化、年化收益率；四项 SHALL 在同一卡片内以单行（或多列网格）紧凑展示，数值格式化为货币/百分比。
 
 #### Scenario: 卡片显示
 - **WHEN** 页面加载完成
-- **THEN** 显示 4 个卡片，数值格式化为货币/百分比
+- **THEN** 显示上述四项指标，布局紧凑可读
 
 #### Scenario: 变化颜色
 - **WHEN** 本期变化为正
@@ -80,3 +80,24 @@ Vue 仪表盘路由 `/dashboard`：展示净资产、趋势、构成、月度变
 - **WHEN** API 请求失败
 - **THEN** 显示错误提示
 
+### Requirement: 资产构成移动端布局
+在 `DashboardPage.vue` 中，「资产构成（类型）」与「资产构成（归属）」所在区域 SHALL 在视口宽度小于 768px 时以**单列**展示；每个卡片内饼图 SHALL 具备可读图例或标签（例如 ECharts `legend` 滚动或标签换行），不得因固定双列栅格导致图例被裁切无法阅读。
+
+#### Scenario: 窄屏单列
+- **WHEN** 在宽度小于 768px 的视口打开 `/dashboard`
+- **THEN** 两个资产构成卡片纵向排列，各占接近全宽
+
+#### Scenario: 图例可读
+- **WHEN** 构成数据非空且账户/类型项较多
+- **THEN** 用户仍可通过图例或标签识别各扇区含义（支持滚动或折叠策略）
+
+### Requirement: 类型内账户占比图
+仪表盘 SHALL 展示「各资产类型下各账户占比」：用户 SHALL 能选择资产类型（例如下拉），并以饼图展示该类型下各账户金额占比；数据来自 `GET /api/v1/dashboard/composition` 的 `byTypeAccounts`（或等价字段）；类型标签与账户名称与 `settingsStore` 及账户列表一致。
+
+#### Scenario: 有数据时展示
+- **WHEN** API 返回 `byTypeAccounts` 且某类型下存在可展示余额
+- **THEN** 用户可选择类型并看到对应饼图，数值与接口一致
+
+#### Scenario: 无分账户数据时
+- **WHEN** 接口无 `byTypeAccounts` 或为空（旧后端或回滚）
+- **THEN** 页面不崩溃，显示空状态或提示
