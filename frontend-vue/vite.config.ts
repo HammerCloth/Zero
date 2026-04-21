@@ -7,6 +7,23 @@ import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/vue-echarts')) {
+            return 'echarts-vendor'
+          }
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) {
+            return 'echarts-vendor'
+          }
+          if (id.includes('node_modules/naive-ui')) {
+            return 'naive-vendor'
+          }
+        },
+      },
+    },
+  },
   plugins: [
     vue(),
     AutoImport({

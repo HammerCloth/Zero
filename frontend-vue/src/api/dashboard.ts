@@ -20,11 +20,18 @@ export async function fetchTrend(range?: string) {
   return data
 }
 
+/** 最新快照：各账户类型下，账户 id → 有效余额（与 byType 聚合口径一致） */
+export type CompositionByTypeAccounts = Record<string, Record<string, number>>
+
+export interface DashboardComposition {
+  byType: Record<string, number>
+  byOwner: Record<string, number>
+  /** 新字段；旧后端可能缺失 */
+  byTypeAccounts?: CompositionByTypeAccounts
+}
+
 export async function fetchComposition() {
-  const { data } = await http.get<{
-    byType: Record<string, number>
-    byOwner: Record<string, number>
-  }>('/api/v1/dashboard/composition')
+  const { data } = await http.get<DashboardComposition>('/api/v1/dashboard/composition')
   return data
 }
 

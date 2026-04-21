@@ -11,8 +11,9 @@ import {
   TooltipComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
+import * as accountApi from '@/api/account'
 import * as dashboardApi from '@/api/dashboard'
-import type { AccountTrendSeries, MonthlyGrowthPoint } from '@/api/dashboard'
+import type { AccountTrendSeries, DashboardComposition, MonthlyGrowthPoint } from '@/api/dashboard'
 import * as exportApi from '@/api/export'
 import { formatMoney } from '@/lib/format'
 import { DIM_ACCOUNT_OWNER, DIM_ACCOUNT_TYPE, useSettingsStore } from '@/stores/settings'
@@ -43,10 +44,12 @@ const stackedPoints = ref<{ date: string; byType: Record<string, number> }[]>([]
 const accountTrends = ref<AccountTrendSeries[]>([])
 const accountTypeFilter = ref('')
 
-const composition = ref<{ byType: Record<string, number>; byOwner: Record<string, number> }>({
+const composition = ref<DashboardComposition>({
   byType: {},
   byOwner: {},
 })
+/** 账户 id → 展示名（用于分账户占比图） */
+const accountNameById = ref<Record<string, string>>({})
 const year = ref(new Date().getFullYear())
 const monthly = ref<MonthlyGrowthPoint[]>([])
 
@@ -90,10 +93,15 @@ const typePie = computed(() => ({
     trigger: 'item',
     valueFormatter: (v: number) => formatMoney(v as number),
   },
+  legend: {
+    type: 'scroll',
+    bottom: 0,
+    left: 'center',
+  },
   series: [
     {
       type: 'pie',
-      radius: ['42%', '68%'],
+      radius: ['32%', '56%'],
       data: Object.entries(composition.value.byType).map(([key, value]) => ({
         name: settings.label(DIM_ACCOUNT_TYPE, key),
         value,
@@ -107,10 +115,15 @@ const ownerPie = computed(() => ({
     trigger: 'item',
     valueFormatter: (v: number) => formatMoney(v as number),
   },
+  legend: {
+    type: 'scroll',
+    bottom: 0,
+    left: 'center',
+  },
   series: [
     {
       type: 'pie',
-      radius: ['42%', '68%'],
+      radius: ['32%', '56%'],
       data: Object.entries(composition.value.byOwner).map(([key, value]) => ({
         name: settings.label(DIM_ACCOUNT_OWNER, key),
         value,
@@ -118,6 +131,96 @@ const ownerPie = computed(() => ({
     },
   ],
 }))
+
+const palette = [
+  '#6366f1',
+  '#22c55e',
+  '#f97316',
+  '#ec4899',
+  '#14b8a6',
+  '#a855f7',
+  '#eab308',
+  '#64748b',
+]
+
+/** 有分账户数据的类型，供下拉选择 */
+const accountShareTypeOptions = computed(() => {
+  const bta = composition.value.byTypeAccounts
+  if (!bta) {
+    return [] as { label: string; value: string }[]
+  }
+  return Object.keys(bta)
+    .filter((t) => {
+      const row = bta[t] ?? {}
+      return Object.values(row).some((v) => v !== 0 && !Number.isNaN(v))
+    })
+    .sort((a, b) => a.localeCompare(b))
+    .map((t) => ({ label: settings.label(DIM_ACCOUNT_TYPE, t), value: t }))
+})
+
+const accountShareTypeKey = ref<string | null>(null)
+
+watch(
+  accountShareTypeOptions,
+  (opts) => {
+    if (!opts.length) {
+      accountShareTypeKey.value = null
+      return
+    }
+    if (!accountShareTypeKey.value || !opts.some((o) => o.value === accountShareTypeKey.value)) {
+      accountShareTypeKey.value = opts[0].value
+    }
+  },
+  { immediate: true },
+)
+
+/** 当前选中类型下，各账户占比（饼图扇区用绝对值，便于负债等类型展示；tooltip 显示带符号金额） */
+const typeAccountSharePieOption = computed(() => {
+  const bta = composition.value.byTypeAccounts
+  const t = accountShareTypeKey.value
+  if (!bta || !t) {
+    return {
+      tooltip: { trigger: 'item' as const },
+      legend: { type: 'scroll' as const, bottom: 0, left: 'center' },
+      series: [{ type: 'pie' as const, radius: ['34%', '58%'], data: [] as { name: string; value: number }[] }],
+    }
+  }
+  const row = bta[t] ?? {}
+  const entries = Object.entries(row).filter(([, v]) => v !== 0 && !Number.isNaN(v))
+  const data = entries.map(([id, raw], i) => ({
+    name: accountNameById.value[id] ?? id,
+    value: Math.abs(raw),
+    raw,
+    itemStyle: { color: palette[i % palette.length] },
+  }))
+  return {
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (p: { name?: string; data?: { raw?: number } }) => {
+        const raw = Number(p.data?.raw ?? 0)
+        return `${p.name ?? ''}<br/>${formatMoney(raw)}`
+      },
+    },
+    legend: { type: 'scroll' as const, bottom: 0, left: 'center' },
+    series: [
+      {
+        type: 'pie' as const,
+        radius: ['34%', '58%'],
+        data,
+      },
+    ],
+  }
+})
+
+const typeAccountSharePieHasData = computed(() => {
+  const bta = composition.value.byTypeAccounts
+  const t = accountShareTypeKey.value
+  if (!bta || !t) {
+    return false
+  }
+  const row = bta[t] ?? {}
+  return Object.values(row).some((v) => v !== 0 && !Number.isNaN(v))
+})
 
 const stackedByTypeOption = computed(() => {
   const pts = stackedPoints.value
@@ -285,6 +388,12 @@ async function load() {
     }
     summary.value = await dashboardApi.fetchSummary()
     await loadRangeCharts()
+    try {
+      const accs = await accountApi.listAccounts()
+      accountNameById.value = Object.fromEntries(accs.map((a) => [a.id, a.name]))
+    } catch {
+      accountNameById.value = {}
+    }
     composition.value = await dashboardApi.fetchComposition()
     const mg = await dashboardApi.fetchMonthlyGrowth(year.value)
     monthly.value = mg.points
@@ -343,28 +452,26 @@ onMounted(load)
     </n-space>
 
     <n-spin :show="loading">
-      <n-grid :cols="4" responsive="screen" :x-gap="12" :y-gap="12">
-        <n-gi span="4 m:2 l:1">
-          <n-card title="净资产">
-            <n-statistic :value="formatMoney(summary.netWorth)" />
-          </n-card>
-        </n-gi>
-        <n-gi span="4 m:2 l:1">
-          <n-card title="月度变化">
-            <n-statistic :value="formatMoney(summary.monthlyChange)" />
-          </n-card>
-        </n-gi>
-        <n-gi span="4 m:2 l:1">
-          <n-card title="年度变化">
-            <n-statistic :value="formatMoney(summary.annualChange)" />
-          </n-card>
-        </n-gi>
-        <n-gi span="4 m:2 l:1">
-          <n-card title="年化收益率">
-            <n-statistic :value="(summary.annualizedReturn * 100).toFixed(2) + '%'" />
-          </n-card>
-        </n-gi>
-      </n-grid>
+      <n-card title="资产概览" size="small">
+        <n-grid :cols="4" :x-gap="10" :y-gap="4" responsive="screen">
+          <n-gi span="1">
+            <n-statistic label="净资产" :value="formatMoney(summary.netWorth)" tabular-nums />
+          </n-gi>
+          <n-gi span="1">
+            <n-statistic label="月度变化" :value="formatMoney(summary.monthlyChange)" tabular-nums />
+          </n-gi>
+          <n-gi span="1">
+            <n-statistic label="年度变化" :value="formatMoney(summary.annualChange)" tabular-nums />
+          </n-gi>
+          <n-gi span="1">
+            <n-statistic
+              label="年化收益率"
+              :value="(summary.annualizedReturn * 100).toFixed(2) + '%'"
+              tabular-nums
+            />
+          </n-gi>
+        </n-grid>
+      </n-card>
 
       <n-card title="净资产趋势" style="margin-top: 16px">
         <n-space style="margin-bottom: 12px">
@@ -405,18 +512,18 @@ onMounted(load)
         <n-empty v-else description="暂无账户或快照数据" />
       </n-card>
 
-      <n-grid :cols="2" :x-gap="12" style="margin-top: 16px">
-        <n-gi>
+      <n-grid :cols="4" responsive="screen" :x-gap="12" style="margin-top: 16px">
+        <n-gi span="4 m:2">
           <n-card title="资产构成（类型）">
-            <v-chart v-if="Object.keys(composition.byType).length" style="height: 280px" :option="typePie" autoresize />
+            <v-chart v-if="Object.keys(composition.byType).length" style="height: 300px" :option="typePie" autoresize />
             <n-empty v-else />
           </n-card>
         </n-gi>
-        <n-gi>
+        <n-gi span="4 m:2">
           <n-card title="资产构成（归属）">
             <v-chart
               v-if="Object.keys(composition.byOwner).length"
-              style="height: 280px"
+              style="height: 300px"
               :option="ownerPie"
               autoresize
             />
@@ -424,6 +531,27 @@ onMounted(load)
           </n-card>
         </n-gi>
       </n-grid>
+
+      <n-card title="各类型内账户占比" style="margin-top: 16px">
+        <n-space vertical size="small" style="margin-bottom: 12px">
+          <n-text depth="3">基于最新快照；选择资产类型后，以饼图查看该类型下各账户金额占比</n-text>
+          <n-select
+            v-model:value="accountShareTypeKey"
+            :options="accountShareTypeOptions"
+            placeholder="选择资产类型"
+            style="max-width: 320px"
+            :disabled="!accountShareTypeOptions.length"
+          />
+        </n-space>
+        <v-chart
+          v-if="accountShareTypeKey && typeAccountSharePieHasData"
+          style="height: 320px"
+          :option="typeAccountSharePieOption"
+          autoresize
+        />
+        <n-empty v-else-if="!accountShareTypeOptions.length" description="暂无分账户数据（需后端返回 byTypeAccounts）" />
+        <n-empty v-else description="该类型下暂无可展示的账户余额" />
+      </n-card>
 
       <n-card title="月度净资产变化" style="margin-top: 16px">
         <n-space style="margin-bottom: 12px">

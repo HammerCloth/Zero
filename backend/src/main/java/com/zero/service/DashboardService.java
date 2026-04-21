@@ -146,13 +146,18 @@ public class DashboardService {
   public Map<String, Object> composition(String userId) {
     List<Snapshot> desc = snapshotMapper.listSnapshotsByUser(userId);
     if (desc.isEmpty()) {
-      return Map.of("byType", Map.of(), "byOwner", Map.of());
+      Map<String, Object> empty = new LinkedHashMap<>();
+      empty.put("byType", Map.of());
+      empty.put("byOwner", Map.of());
+      empty.put("byTypeAccounts", Map.of());
+      return empty;
     }
     Map<String, Account> accounts = accountsById(userId);
     Snapshot latest = desc.get(0);
     List<SnapshotItem> items = snapshotMapper.listItems(latest.getId());
     Map<String, Double> byType = new HashMap<>();
     Map<String, Double> byOwner = new HashMap<>();
+    Map<String, Map<String, Double>> byTypeAccounts = new LinkedHashMap<>();
     for (SnapshotItem it : items) {
       Account a = accounts.get(it.getAccountId());
       if (a == null) {
@@ -161,8 +166,15 @@ public class DashboardService {
       double eff = BalanceLogic.effectiveBalance(a.getType(), it.getBalance());
       byType.merge(a.getType(), eff, Double::sum);
       byOwner.merge(a.getOwner(), eff, Double::sum);
+      byTypeAccounts
+          .computeIfAbsent(a.getType(), k -> new LinkedHashMap<>())
+          .merge(it.getAccountId(), eff, Double::sum);
     }
-    return Map.of("byType", byType, "byOwner", byOwner);
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("byType", byType);
+    out.put("byOwner", byOwner);
+    out.put("byTypeAccounts", byTypeAccounts);
+    return out;
   }
 
   public Map<String, Object> monthlyGrowth(String userId, Integer year) {
