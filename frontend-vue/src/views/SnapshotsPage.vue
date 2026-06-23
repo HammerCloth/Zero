@@ -43,19 +43,25 @@ function rowProps(row: SnapshotListItem) {
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between">
-      <n-h2 style="margin: 0">快照</n-h2>
-      <n-space>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">快照</h2>
+        <p class="page-header__desc">按时间回看每次记录的净资产状态，并可切换到日历视图快速定位。</p>
+      </div>
+      <div class="inline-control">
         <n-button @click="router.push('/snapshots/calendar')">日历</n-button>
         <n-button type="primary" @click="router.push('/snapshots/new')">新建快照</n-button>
-      </n-space>
-    </n-space>
-    <n-data-table
-      :loading="loading"
-      :columns="columns"
-      :data="rows"
-      :row-props="rowProps"
-    />
-  </n-space>
+      </div>
+    </section>
+
+    <div class="data-table-shell">
+      <n-data-table
+        :loading="loading"
+        :columns="columns"
+        :data="rows"
+        :row-props="rowProps"
+      />
+    </div>
+  </div>
 </template>

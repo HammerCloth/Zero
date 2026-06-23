@@ -74,17 +74,20 @@ function onReset() {
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between" align="center">
-      <n-h2 style="margin: 0">设置</n-h2>
-      <n-space>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">设置</h2>
+        <p class="page-header__desc">维护账户类型、归属和大事记分类，让数据口径在所有页面保持一致。</p>
+      </div>
+      <div class="inline-control">
         <n-button @click="refresh">刷新</n-button>
         <n-button type="warning" @click="onReset">恢复默认</n-button>
-      </n-space>
-    </n-space>
+      </div>
+    </section>
     <n-spin :show="settings.loading">
-      <n-space vertical size="large">
-        <n-card title="账户类型">
+      <div class="page-stack">
+        <n-card class="surface-panel" title="账户类型">
           <n-table v-if="editing[DIM_ACCOUNT_TYPE]" :single-line="false" size="small">
             <thead>
               <tr>
@@ -113,7 +116,7 @@ function onReset() {
           </n-space>
         </n-card>
 
-        <n-card title="账户归属">
+        <n-card class="surface-panel" title="账户归属">
           <n-table v-if="editing[DIM_ACCOUNT_OWNER]" :single-line="false" size="small">
             <thead>
               <tr>
@@ -142,7 +145,7 @@ function onReset() {
           </n-space>
         </n-card>
 
-        <n-card title="大事记分类">
+        <n-card class="surface-panel" title="大事记分类">
           <n-table v-if="editing[DIM_EVENT_CATEGORY]" :single-line="false" size="small">
             <thead>
               <tr>
@@ -170,7 +173,7 @@ function onReset() {
             <n-button size="small" type="primary" @click="saveDim(DIM_EVENT_CATEGORY)">保存本组</n-button>
           </n-space>
         </n-card>
-      </n-space>
+      </div>
     </n-spin>
-  </n-space>
+  </div>
 </template>

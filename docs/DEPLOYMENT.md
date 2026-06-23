@@ -160,11 +160,11 @@ JWT_REFRESH_SECRET=第二个随机串
 CADDY_SITE=app.example.com
 ```
 
-若用户既可能访问 **`www`** 又可能访问**根域**，建议**同时写在 `CADDY_SITE`**（英文逗号分隔，无多余空格），否则只配一侧时，访问另一侧可能**不匹配站点**：
+若用户既可能访问 **`www`** 又可能访问**根域**，建议**同时写在 `CADDY_SITE`**。Caddy 的 Caddyfile 里**多个站点地址**写法为「英文逗号 + 逗号后一个空格」，**不能**写成 `a.com,b.com`（会整段被当成一个非法地址）。例如：
 
 ```env
 FRONTEND_ORIGIN=https://www.example.com
-CADDY_SITE=www.example.com,example.com
+CADDY_SITE=www.example.com, example.com
 ```
 
 ```bash
@@ -172,7 +172,7 @@ chmod 600 .env
 ```
 
 - `FRONTEND_ORIGIN`：必须与浏览器地址栏一致（含 `https://`）。若同时存在 **www 与根域**访问，可写多个来源（**英文逗号分隔**），例如：`https://www.mimixia.online,https://mimixia.online`。只配一个而用户访问另一个时，登录后接口会因 **CORS** 失败，页面可能白屏。
-- `CADDY_SITE`：只写域名；Caddy 将申请 Let’s Encrypt（需域名解析到本机且 80/443 可达）。
+- `CADDY_SITE`：只写域名；多域名时须 **`域名, 空格域名`**（逗号后必须有空格），否则 Caddy 启动会报错。Caddy 将申请 Let’s Encrypt（需域名解析到本机且 80/443 可达）。
 - 勿将 `.env` 提交到 Git（`zero/.gitignore` 已忽略）。
 
 ---
@@ -211,6 +211,37 @@ docker compose ps
 docker compose logs -f --tail=100
 ```
 
+### 查看 Caddy / 后端日志
+
+均在 **`zero` 目录**（与 `docker-compose.yml` 同级）执行。
+
+**Caddy**（反向代理、TLS、静态资源、`Caddyfile` 报错多出现在此）：
+
+```bash
+docker compose logs -f caddy
+docker compose logs --tail=100 caddy
+docker compose logs -f -t caddy
+```
+
+**Spring Boot 后端**：
+
+```bash
+docker compose logs -f backend
+```
+
+**Caddy 与后端一起看**（排查 502、接口转发）：
+
+```bash
+docker compose logs -f --tail=50 caddy backend
+```
+
+也可按 **容器名**（与 `docker-compose.yml` 里 `container_name` 一致）：
+
+```bash
+docker logs -f zero-caddy
+docker logs -f zero-backend
+```
+
 ---
 
 ## 10. 首次访问与管理员
@@ -245,7 +276,7 @@ docker compose up -d --build
 |------|------|
 | **打不开 / 白屏 / 一直转圈** | **先看 `ls frontend-vue/dist/index.html`**：不存在则必须先 `cd frontend-vue && npm ci && npm run build`（或 `./scripts/deploy.sh`）。再查：`docker compose ps`；**`CADDY_SITE` / `FRONTEND_ORIGIN` 是否与浏览器地址一致**（`www` 与根域是否都写入 `CADDY_SITE`）；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP。在 **`zero` 目录**执行 **`./scripts/diagnose.sh`** 可快速汇总上述检查。 |
 | 网页打不开 | `docker compose ps`；云安全组与本机 **ufw** 是否放行 80/443；DNS 是否指向本机 IP |
-| **感觉 Caddy「没监听到」域名 / 证书不对** | Caddy **按站点块匹配浏览器 `Host`**，不是「任意域名进来都算」。**`.env` 里 `CADDY_SITE` 必须包含你实际访问的主机名**（例如只配了根域却访问 `www`，或相反，会不匹配）。建议同时写：`CADDY_SITE=www.mimixia.online,mimixia.online`，且 **`FRONTEND_ORIGIN` 与地址栏一致**。核对 DNS：**域名拼写**（常见笔误 `online` 写成 `onlne`）、A 记录是否指向本机公网 IP。改 `.env` 后执行 `docker compose up -d --force-recreate`。已开启访问日志：`docker compose logs -f caddy`，请求到达时会有访问记录；**若完全无新日志**，说明流量未到本机（DNS/防火墙/端口）。 |
+| **感觉 Caddy「没监听到」域名 / 证书不对** | Caddy **按站点块匹配浏览器 `Host`**，不是「任意域名进来都算」。**`.env` 里 `CADDY_SITE` 必须包含你实际访问的主机名**（例如只配了根域却访问 `www`，或相反，会不匹配）。建议同时写：`CADDY_SITE=www.mimixia.online, mimixia.online`（注意逗号后有空格），且 **`FRONTEND_ORIGIN` 与地址栏一致**。核对 DNS：**域名拼写**（常见笔误 `online` 写成 `onlne`）、A 记录是否指向本机公网 IP。改 `.env` 后执行 `docker compose up -d --force-recreate`。已开启访问日志：`docker compose logs -f caddy`，请求到达时会有访问记录；**若完全无新日志**，说明流量未到本机（DNS/防火墙/端口）。 |
 | **502**，日志含 `lookup backend` / `127.0.0.11` / `server misbehaving` | **先确认后端在跑**：`docker compose ps`、`docker compose logs backend`。再在 Caddy 容器内测解析：`docker exec zero-caddy wget -qO- http://backend:8080/healthz`。若 `backend` 解析失败，在同一目录执行 `docker compose down && docker compose up -d --build`（勿单独用 `docker run` 起 Caddy）。勿在 `/etc/docker/daemon.json` 里把容器 DNS 改成仅公网 DNS，否则会破坏服务名解析。 |
 | 登录后 401 / CORS | `FRONTEND_ORIGIN` 是否与浏览器地址完全一致 |
 | HTTPS 证书失败 | 域名是否解析到本机；**80** 是否对公网开放（Let’s Encrypt HTTP-01） |
@@ -272,8 +303,12 @@ JWT_REFRESH_SECRET=...
 | 构建前端 + 启动（推荐） | `./scripts/deploy.sh` |
 | 仅构建前端 | `cd frontend-vue && npm ci && npm run build && cd ..` |
 | 启动/重建 | `docker compose up -d --build` |
-| 查看日志 | `docker compose logs -f` |
+| 查看 Caddy 日志 | `docker compose logs -f caddy`（或 `docker logs -f zero-caddy`） |
+| 查看后端日志 | `docker compose logs -f backend`（或 `docker logs -f zero-backend`） |
+| 查看全部服务日志 | `docker compose logs -f` |
 | 停止 | `docker compose down` |
+
+更多参数（如 `--tail`、`-t` 时间戳、同时看两个服务）见 **§9「查看 Caddy / 后端日志」**。
 
 若仓库结构不同，只要进入 **`docker-compose.yml` 所在目录**，步骤顺序不变。
 

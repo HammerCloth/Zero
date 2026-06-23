@@ -124,31 +124,30 @@ onMounted(load)
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space align="center">
-      <n-h2 style="margin: 0">大事记统计</n-h2>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">大事记统计</h2>
+        <p class="page-header__desc">汇总年度支出事件，快速看分类占比与金额分布。</p>
+      </div>
       <n-input-number v-model:value="year" :min="2000" :max="2100" />
-    </n-space>
+    </section>
     <n-text v-if="rows.length">年度支出合计：<strong>{{ formatMoney(grandTotal) }}</strong></n-text>
     <n-spin :show="loading">
-      <n-space vertical size="large">
-        <n-grid v-if="rows.length" :cols="2" responsive="screen" :x-gap="16">
-          <n-gi>
-            <n-card title="按分类（支出）">
-              <v-chart style="height: 300px" :option="barOption" autoresize />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card title="占比">
-              <v-chart style="height: 300px" :option="pieOption" autoresize />
-            </n-card>
-          </n-gi>
-        </n-grid>
-        <n-card title="明细">
+      <div class="page-stack">
+        <section v-if="rows.length" class="section-grid section-grid--two">
+          <n-card class="surface-panel" title="按分类（支出）">
+            <v-chart class="chart-frame--compact" :option="barOption" autoresize />
+          </n-card>
+          <n-card class="surface-panel" title="占比">
+            <v-chart class="chart-frame--compact" :option="pieOption" autoresize />
+          </n-card>
+        </section>
+        <n-card class="surface-panel" title="明细">
           <n-data-table :columns="columns" :data="rows" />
         </n-card>
         <n-empty v-if="!loading && !rows.length" description="该年暂无支出数据" />
-      </n-space>
+      </div>
     </n-spin>
-  </n-space>
+  </div>
 </template>

@@ -445,96 +445,105 @@ onMounted(load)
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between" align="center">
-      <n-h2 style="margin: 0">总览</n-h2>
-      <n-button @click="downloadCsv">导出 CSV</n-button>
-    </n-space>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">总览</h2>
+        <p class="page-header__desc">
+          用一个视图同时观察净资产、资产构成、账户走势和年度变化。手机访问时保留关键数字和核心图表，不依赖额外静态素材。
+        </p>
+      </div>
+      <n-button type="primary" @click="downloadCsv">导出 CSV</n-button>
+    </section>
 
     <n-spin :show="loading">
-      <n-card title="资产概览" size="small">
-        <n-grid :cols="4" :x-gap="10" :y-gap="4" responsive="screen">
-          <n-gi span="1">
-            <n-statistic label="净资产" :value="formatMoney(summary.netWorth)" tabular-nums />
-          </n-gi>
-          <n-gi span="1">
-            <n-statistic label="月度变化" :value="formatMoney(summary.monthlyChange)" tabular-nums />
-          </n-gi>
-          <n-gi span="1">
-            <n-statistic label="年度变化" :value="formatMoney(summary.annualChange)" tabular-nums />
-          </n-gi>
-          <n-gi span="1">
-            <n-statistic
-              label="年化收益率"
-              :value="(summary.annualizedReturn * 100).toFixed(2) + '%'"
-              tabular-nums
-            />
-          </n-gi>
-        </n-grid>
-      </n-card>
+      <section class="stat-grid">
+        <article class="stat-card">
+          <div class="stat-card__label">净资产</div>
+          <div class="stat-card__value">{{ formatMoney(summary.netWorth) }}</div>
+          <div class="stat-card__hint">当前账户与资产快照汇总</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">月度变化</div>
+          <div class="stat-card__value">{{ formatMoney(summary.monthlyChange) }}</div>
+          <div class="stat-card__hint">最近一个统计周期变化</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">年度变化</div>
+          <div class="stat-card__value">{{ formatMoney(summary.annualChange) }}</div>
+          <div class="stat-card__hint">当前年度累计增减</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">年化收益率</div>
+          <div class="stat-card__value">{{ (summary.annualizedReturn * 100).toFixed(2) }}%</div>
+          <div class="stat-card__hint">按已记录数据估算</div>
+        </article>
+      </section>
 
-      <n-card title="净资产趋势" style="margin-top: 16px">
-        <n-space style="margin-bottom: 12px">
+      <n-card class="surface-panel" title="净资产趋势">
+        <div class="table-toolbar" style="margin-bottom: 12px">
+          <span class="section-note">查看不同时间窗口下的整体走势</span>
           <n-radio-group v-model:value="range">
             <n-radio-button value="3m">3 个月</n-radio-button>
             <n-radio-button value="6m">6 个月</n-radio-button>
             <n-radio-button value="1y">1 年</n-radio-button>
             <n-radio-button value="all">全部</n-radio-button>
           </n-radio-group>
-        </n-space>
-        <v-chart v-if="trendPoints.length" style="height: 320px" :option="trendOption" autoresize />
+        </div>
+        <v-chart v-if="trendPoints.length" class="chart-frame" :option="trendOption" autoresize />
         <n-empty v-else description="暂无数据" />
       </n-card>
 
-      <n-card title="资产堆叠（按类型）" style="margin-top: 16px">
-        <n-text depth="3" style="display: block; margin-bottom: 8px">与上方时间范围一致</n-text>
-        <v-chart v-if="stackedPoints.length" style="height: 360px" :option="stackedByTypeOption" autoresize />
+      <n-card class="surface-panel" title="资产堆叠（按类型）">
+        <span class="section-note" style="display: block; margin-bottom: 8px">与上方时间范围一致</span>
+        <v-chart v-if="stackedPoints.length" class="chart-frame" :option="stackedByTypeOption" autoresize />
         <n-empty v-else description="暂无数据" />
       </n-card>
 
-      <n-card title="账户余额趋势" style="margin-top: 16px">
-        <n-space style="margin-bottom: 12px" align="center">
-          <span>筛选类型</span>
+      <n-card class="surface-panel" title="账户余额趋势">
+        <div class="inline-control" style="margin-bottom: 12px">
+          <span class="section-note">筛选类型</span>
           <n-select
             v-model:value="accountTypeFilter"
             :options="typeSelectOptions"
-            style="width: 200px"
+            style="width: min(220px, 100%)"
             clearable
             placeholder="全部"
           />
-        </n-space>
+        </div>
         <v-chart
           v-if="filteredAccountTrends.some((a) => a.points.length)"
-          style="height: 380px"
+          class="chart-frame"
           :option="accountTrendOption"
           autoresize
         />
         <n-empty v-else description="暂无账户或快照数据" />
       </n-card>
 
-      <n-grid :cols="4" responsive="screen" :x-gap="12" style="margin-top: 16px">
-        <n-gi span="4 m:2">
-          <n-card title="资产构成（类型）">
-            <v-chart v-if="Object.keys(composition.byType).length" style="height: 300px" :option="typePie" autoresize />
-            <n-empty v-else />
-          </n-card>
-        </n-gi>
-        <n-gi span="4 m:2">
-          <n-card title="资产构成（归属）">
-            <v-chart
-              v-if="Object.keys(composition.byOwner).length"
-              style="height: 300px"
-              :option="ownerPie"
-              autoresize
-            />
-            <n-empty v-else />
-          </n-card>
-        </n-gi>
-      </n-grid>
+      <section class="section-grid section-grid--two">
+        <n-card class="surface-panel" title="资产构成（类型）">
+          <v-chart
+            v-if="Object.keys(composition.byType).length"
+            class="chart-frame--compact"
+            :option="typePie"
+            autoresize
+          />
+          <n-empty v-else />
+        </n-card>
+        <n-card class="surface-panel" title="资产构成（归属）">
+          <v-chart
+            v-if="Object.keys(composition.byOwner).length"
+            class="chart-frame--compact"
+            :option="ownerPie"
+            autoresize
+          />
+          <n-empty v-else />
+        </n-card>
+      </section>
 
-      <n-card title="各类型内账户占比" style="margin-top: 16px">
-        <n-space vertical size="small" style="margin-bottom: 12px">
-          <n-text depth="3">基于最新快照；选择资产类型后，以饼图查看该类型下各账户金额占比</n-text>
+      <n-card class="surface-panel" title="各类型内账户占比">
+        <div class="page-stack" style="gap: 12px">
+          <span class="section-note">基于最新快照；选择资产类型后，以饼图查看该类型下各账户金额占比。</span>
           <n-select
             v-model:value="accountShareTypeKey"
             :options="accountShareTypeOptions"
@@ -542,10 +551,10 @@ onMounted(load)
             style="max-width: 320px"
             :disabled="!accountShareTypeOptions.length"
           />
-        </n-space>
+        </div>
         <v-chart
           v-if="accountShareTypeKey && typeAccountSharePieHasData"
-          style="height: 320px"
+          class="chart-frame--compact"
           :option="typeAccountSharePieOption"
           autoresize
         />
@@ -553,13 +562,14 @@ onMounted(load)
         <n-empty v-else description="该类型下暂无可展示的账户余额" />
       </n-card>
 
-      <n-card title="月度净资产变化" style="margin-top: 16px">
-        <n-space style="margin-bottom: 12px">
+      <n-card class="surface-panel" title="月度净资产变化">
+        <div class="inline-control" style="margin-bottom: 12px">
+          <span class="section-note">统计年份</span>
           <n-input-number v-model:value="year" :min="2000" :max="2100" />
-        </n-space>
-        <v-chart v-if="monthly.length" style="height: 300px" :option="monthlyBar" autoresize />
+        </div>
+        <v-chart v-if="monthly.length" class="chart-frame--compact" :option="monthlyBar" autoresize />
         <n-empty v-else />
       </n-card>
     </n-spin>
-  </n-space>
+  </div>
 </template>

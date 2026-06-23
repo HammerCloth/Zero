@@ -82,29 +82,33 @@ async function deactivate(row: Account) {
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between">
-      <n-h2 style="margin: 0">账户</n-h2>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">账户</h2>
+        <p class="page-header__desc">通过拖拽整理展示顺序，保持移动端和桌面端都能快速辨认账户结构。</p>
+      </div>
       <n-button type="primary" @click="openCreate">新建账户</n-button>
-    </n-space>
+    </section>
+
     <n-spin :show="loading">
-      <draggable v-model="list" item-key="id" handle=".drag-handle" @end="onDragEnd">
+      <draggable v-model="list" item-key="id" handle=".drag-handle" class="draggable-list" @end="onDragEnd">
         <template #item="{ element }">
-          <n-card size="small" style="margin-bottom: 8px">
-            <n-space justify="space-between" align="center">
-              <n-space align="center">
-                <span class="drag-handle" style="cursor: grab; opacity: 0.6">⋮⋮</span>
-                <strong>{{ element.name }}</strong>
-                <n-tag size="small">{{ settings.label(DIM_ACCOUNT_TYPE, element.type) }}</n-tag>
-                <n-tag size="small" type="info">{{ settings.label(DIM_ACCOUNT_OWNER, element.owner) }}</n-tag>
-                <span style="opacity: 0.6">排序 {{ element.sort_order }}</span>
-              </n-space>
-              <n-space>
-                <n-button size="small" @click="openEdit(element)">编辑</n-button>
-                <n-button size="small" type="warning" @click="deactivate(element)">停用</n-button>
-              </n-space>
-            </n-space>
-          </n-card>
+          <div class="account-row">
+            <div class="account-row__main">
+              <span class="drag-handle">⋮⋮</span>
+              <strong>{{ element.name }}</strong>
+              <n-tag size="small">{{ settings.label(DIM_ACCOUNT_TYPE, element.type) }}</n-tag>
+              <n-tag size="small" type="info">{{ settings.label(DIM_ACCOUNT_OWNER, element.owner) }}</n-tag>
+            </div>
+            <div class="account-row__meta">
+              <span class="section-note">排序 {{ element.sort_order }}</span>
+            </div>
+            <div class="account-row__actions">
+              <n-button size="small" @click="openEdit(element)">编辑</n-button>
+              <n-button size="small" type="warning" @click="deactivate(element)">停用</n-button>
+            </div>
+          </div>
         </template>
       </draggable>
     </n-spin>
@@ -124,5 +128,5 @@ async function deactivate(row: Account) {
         <n-button type="primary" @click="saveAccount">保存</n-button>
       </template>
     </n-modal>
-  </n-space>
+  </div>
 </template>
