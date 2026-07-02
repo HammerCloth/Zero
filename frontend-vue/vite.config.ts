@@ -11,14 +11,35 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('node_modules/vuedraggable')) {
+            return 'drag-vendor'
+          }
           if (id.includes('node_modules/vue-echarts')) {
-            return 'echarts-vendor'
+            return 'vue-echarts-vendor'
           }
-          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) {
-            return 'echarts-vendor'
+          if (id.includes('node_modules/zrender')) {
+            return 'zrender-vendor'
           }
-          if (id.includes('node_modules/naive-ui')) {
-            return 'naive-vendor'
+          if (id.includes('node_modules/echarts/lib/chart')) {
+            return 'echarts-charts-vendor'
+          }
+          if (id.includes('node_modules/echarts/lib/component')) {
+            return 'echarts-components-vendor'
+          }
+          if (id.includes('node_modules/echarts/lib/renderer')) {
+            return 'echarts-renderers-vendor'
+          }
+          if (id.includes('node_modules/echarts/lib/core') || id.includes('node_modules/echarts/lib/model') || id.includes('node_modules/echarts/lib/util')) {
+            return 'echarts-core-vendor'
+          }
+          if (id.includes('node_modules/echarts/charts')) {
+            return 'echarts-charts-vendor'
+          }
+          if (id.includes('node_modules/echarts/components') || id.includes('node_modules/echarts/renderers')) {
+            return 'echarts-components-vendor'
+          }
+          if (id.includes('node_modules/echarts')) {
+            return 'echarts-core-vendor'
           }
         },
       },
@@ -43,7 +64,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8080',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

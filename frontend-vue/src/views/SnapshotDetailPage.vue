@@ -106,22 +106,42 @@ function onDelete() {
 
 <template>
   <n-spin :show="loading">
-    <template v-if="snap">
-      <n-space justify="space-between" style="margin-bottom: 16px">
-        <n-h2 style="margin: 0">快照 {{ snap.date }}</n-h2>
-        <n-space>
+    <div v-if="snap" class="page-stack">
+      <section class="page-header">
+        <div class="page-header__copy">
+          <h2 class="page-header__title">快照 {{ snap.date }}</h2>
+          <p class="page-header__desc">查看该日期下的账户余额和关联大事记，也可以继续编辑或删除这次记录。</p>
+        </div>
+        <div class="inline-control">
           <n-button @click="onEdit">编辑</n-button>
           <n-button type="error" @click="onDelete">删除</n-button>
-        </n-space>
-      </n-space>
-      <n-descriptions bordered label-placement="top" :column="2">
-        <n-descriptions-item label="备注">{{ snap.note || '—' }}</n-descriptions-item>
-        <n-descriptions-item label="创建时间">{{ snap.createdAt }}</n-descriptions-item>
-      </n-descriptions>
-      <n-h3 style="margin-top: 24px">账户余额</n-h3>
-      <n-data-table :columns="itemColumns" :data="snap.items" />
-      <n-h3 style="margin-top: 24px">大事记</n-h3>
-      <n-data-table :columns="eventColumns" :data="snap.events" />
-    </template>
+        </div>
+      </section>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-card">
+          <span class="stat-card__label">备注</span>
+          <strong class="detail-meta-card__value">{{ snap.note || '—' }}</strong>
+        </div>
+        <div class="detail-meta-card">
+          <span class="stat-card__label">创建时间</span>
+          <strong class="detail-meta-card__value">{{ snap.createdAt }}</strong>
+        </div>
+      </div>
+
+      <section class="page-stack" style="gap: 12px">
+        <h3 class="section-title">账户余额</h3>
+        <div class="data-table-shell">
+          <n-data-table :columns="itemColumns" :data="snap.items" />
+        </div>
+      </section>
+
+      <section class="page-stack" style="gap: 12px">
+        <h3 class="section-title">大事记</h3>
+        <div class="data-table-shell">
+          <n-data-table :columns="eventColumns" :data="snap.events" />
+        </div>
+      </section>
+    </div>
   </n-spin>
 </template>

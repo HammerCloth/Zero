@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
+import type { AxiosError } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -14,15 +15,33 @@ const password = ref('')
 const remember = ref(true)
 const loading = ref(false)
 
+function safeRedirect() {
+  const raw = route.query.redirect
+  const redirect = typeof raw === 'string' ? raw : '/dashboard'
+  if (!redirect.startsWith('/') || redirect.startsWith('//')) {
+    return '/dashboard'
+  }
+  return redirect
+}
+
 async function submit() {
   loading.value = true
   try {
     await auth.login(username.value.trim(), password.value, remember.value)
+  } catch (err) {
+    const error = err as AxiosError<{ error?: string }>
+    message.error(error.response?.data?.error || '登录失败，请检查用户名、密码或本地代理配置')
+    loading.value = false
+    return
+  }
+
+  try {
     message.success('登录成功')
-    const redirect = (route.query.redirect as string) || '/dashboard'
+    const redirect = safeRedirect()
     await router.replace(redirect)
   } catch {
-    message.error('用户名或密码错误')
+    const redirect = safeRedirect()
+    window.location.href = redirect
   } finally {
     loading.value = false
   }

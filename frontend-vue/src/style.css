@@ -499,6 +499,34 @@ select {
   gap: 12px;
 }
 
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.detail-meta-card {
+  padding: 18px 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-meta-card__value {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--text-1);
+}
+
+.section-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.15;
+  color: var(--text-1);
+}
+
 .account-row {
   display: flex;
   justify-content: space-between;
@@ -620,7 +648,8 @@ select {
   }
 
   .stat-grid,
-  .section-grid--two {
+  .section-grid--two,
+  .detail-meta-grid {
     grid-template-columns: 1fr;
   }
 

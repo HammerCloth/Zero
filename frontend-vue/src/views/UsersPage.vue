@@ -86,13 +86,18 @@ const columns: DataTableColumns<User> = [
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between">
-      <n-h2 style="margin: 0">用户管理</n-h2>
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">用户管理</h2>
+        <p class="page-header__desc">创建新用户、重置密码，并检查是否需要首次改密。</p>
+      </div>
       <n-button type="primary" @click="showCreate = true">新建用户</n-button>
-    </n-space>
+    </section>
     <n-spin :show="loading">
-      <n-data-table :columns="columns" :data="rows" :row-key="(r: User) => r.id" />
+      <div class="data-table-shell">
+        <n-data-table :columns="columns" :data="rows" :row-key="(r: User) => r.id" />
+      </div>
     </n-spin>
     <n-modal v-model:show="showCreate" preset="card" title="新建用户" style="width: 440px">
       <n-form>
@@ -116,5 +121,5 @@ const columns: DataTableColumns<User> = [
         <n-button type="primary" @click="savePwd">保存</n-button>
       </template>
     </n-modal>
-  </n-space>
+  </div>
 </template>

@@ -1,5 +1,6 @@
 package com.zero.security;
 
+import com.zero.config.AppEnvProperties;
 import com.zero.config.CorsProperties;
 import java.util.Arrays;
 import java.util.List;
@@ -26,10 +27,15 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final CorsProperties corsProperties;
+  private final AppEnvProperties appEnvProperties;
 
-  public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CorsProperties corsProperties) {
+  public SecurityConfig(
+      JwtAuthenticationFilter jwtAuthenticationFilter,
+      CorsProperties corsProperties,
+      AppEnvProperties appEnvProperties) {
     this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     this.corsProperties = corsProperties;
+    this.appEnvProperties = appEnvProperties;
   }
 
   @Bean
@@ -65,6 +71,10 @@ public class SecurityConfig {
       cfg.setAllowedOrigins(origins);
     } else {
       cfg.addAllowedOriginPattern("*");
+    }
+    if (!"production".equalsIgnoreCase(appEnvProperties.env())) {
+      cfg.addAllowedOriginPattern("http://localhost:*");
+      cfg.addAllowedOriginPattern("http://127.0.0.1:*");
     }
     cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));

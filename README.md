@@ -1,10 +1,36 @@
-# Project Zero — 家庭资产管家
+# Project Zero
 
-**Spring Boot 3**（REST + SQLite + Flyway）后端与 **Vite + Vue 3** 前端，适合在 2C2G 机器上以 **Docker + Caddy** 部署。
+家庭资产管理应用，采用：
+
+- `backend/`：Spring Boot 3 + SQLite + Flyway
+- `frontend-vue/`：Vue 3 + Vite
+- `docker-compose.yml`：`backend` + `caddy`
+
+当前线上部署方式适合阿里云服务器：`git pull` 更新代码，再执行前端构建或后端容器更新命令。
+
+## 目录结构
+
+- `backend/`：后端源码、Dockerfile、Flyway 迁移
+- `frontend-vue/`：Vue 前端源码与构建产物 `dist/`
+- `Caddyfile`：静态站点与 `/api` 反代
+- `docker-compose.yml`：生产容器编排
+- `scripts/deploy.sh`：一键构建前端并更新容器
+- `docs/DEPLOYMENT.md`：更完整的部署说明
+
+## 线上部署前提
+
+服务器已具备以下条件：
+
+- 已安装 Docker 与 Docker Compose
+- 项目目录已 `git clone`
+- 根目录存在 `.env`
+- 数据库使用 Docker 卷 `zero_data`，容器内路径为 `/data/zero.db`
+
+后端默认不会把数据库放在仓库里，而是放在 Docker 卷中；只要你不执行 `docker compose down -v` 或手工删除卷，现有数据库文件会保留。
 
 ## 本地开发
 
-### 后端
+后端：
 
 ```bash
 cd backend
@@ -12,11 +38,7 @@ export FRONTEND_ORIGIN=http://localhost:5173
 ./mvnw spring-boot:run
 ```
 
-默认监听 `:8080`，数据库路径由 `DATABASE_PATH` 控制（未设置时见 `application.yml`，通常为 `./data/zero.db`）。
-
-健康检查：`curl -sSf http://127.0.0.1:8080/healthz`
-
-### 前端
+前端：
 
 ```bash
 cd frontend-vue
@@ -24,76 +46,102 @@ npm install
 npm run dev
 ```
 
-Vite 将 `/api` 代理到 `http://127.0.0.1:8080`，与生产同源 `/api` 行为一致。
-
-### 生产静态资源构建
+构建前端：
 
 ```bash
 cd frontend-vue
 npm run build
 ```
 
-产物目录：`frontend-vue/dist`（Docker 中由 Caddy 挂载）。
+## 阿里云线上更新命令
 
-## 单元测试与构建校验
+以下命令默认在项目根目录 `zero/` 下执行。
 
-前置：已安装 **JDK 21+**、**Node.js 22**（或兼容版本），前端已执行 `npm install`。
+### 1. 只更新 Vue 前端
+
+适用场景：只改了 `frontend-vue/`，不需要重发后端。
 
 ```bash
-cd backend && ./mvnw test
-cd ../frontend-vue && npm run build
+git pull
+cd frontend-vue
+npm ci
+npm run build
+cd ..
+docker compose restart caddy
 ```
 
-## Docker 部署（Caddy + 后端）
+说明：
 
-更完整的分步说明（**以 Ubuntu 24.04 LTS 为主线**，含 Docker、Node 22、ufw、`.env`、域名）见 **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**；Rocky/Alma 与 CentOS 7 见文档附录。  
-一键构建并启动：`cd zero && ./scripts/deploy.sh`（需已配置 `.env`）；新机装依赖：`sudo bash scripts/bootstrap-ubuntu.sh`。
+- 前端静态文件直接输出到 `frontend-vue/dist/`
+- Caddy 挂载这个目录并对外提供页面
+- 这个流程不会重建后端容器，也不会动当前数据库
 
-1. **构建前端**（Caddy 挂载 `frontend-vue/dist`）：
+### 2. 只更新后端（保留当前数据库）
 
-   ```bash
-   cd frontend-vue && npm ci && npm run build && cd ..
-   ```
+适用场景：只改了 `backend/`，希望保留当前线上数据。
 
-2. **设置密钥与站点**（勿使用示例默认值）：
+```bash
+git pull
+docker compose build backend
+docker compose up -d backend
+```
 
-   ```bash
-   export JWT_ACCESS_SECRET='…'
-   export JWT_REFRESH_SECRET='…'
-   export FRONTEND_ORIGIN='https://你的域名'
-   export CADDY_SITE='你的域名'
-   ```
+说明：
 
-   - `CADDY_SITE`：Caddy 站点地址。默认未设置时为 `:80`（仅 HTTP）。设为域名后，Caddy 会对该域名自动申请 HTTPS（需 80/443 对公网可达）。
-   - `FRONTEND_ORIGIN`：须与用户在浏览器访问的源一致（含协议与域名），用于 CORS 与 Cookie。
+- 这组命令会更新 `backend` 容器
+- `zero_data` 卷会继续挂载，所以不会删除当前 `zero.db`
+- `caddy` 不需要重建
 
-3. **启动**：
+重要说明：
 
-   ```bash
-   docker compose up -d --build
-   ```
+- “保留当前数据库”指的是：不删库、不重置卷、不替换现有 `zero.db`
+- 但如果新版本后端包含新的 Flyway migration，后端启动时仍会自动执行迁移并修改数据库结构
+- 如果你这次明确要求“连表结构都不要动”，先检查 `backend/src/main/resources/db/migration/` 是否新增了 SQL 文件；有新增时，先备份数据库再发版
 
-4. **验证**：浏览器打开 `http://localhost`（或你的域名）→ 首次进入会引导创建管理员；登录后测试快照、仪表盘与导出。
+### 3. 前后端一起更新
 
-## 发布前检查清单（手工）
+```bash
+git pull
+cd frontend-vue
+npm ci
+npm run build
+cd ..
+docker compose up -d --build
+```
 
-| 项 | 说明 |
-| --- | --- |
-| 认证 | 登录、登出、`/refresh` 刷新 access、强制改密、首次 setup |
-| 快照 | 新建快照、编辑、列表、详情、删除 |
-| 图表 | 仪表盘各图加载、时间范围切换、PNG 导出 |
-| 移动端 | 窄屏下底部导航与主布局可用 |
-| 资源 | 部署后 `docker stats` 观察内存（随数据量与 JVM 设置变化） |
+如果你平时就按这个方式发版，也可以直接用：
 
-## 目录说明
+```bash
+GIT_PULL=1 ./scripts/deploy.sh
+```
 
-| 路径 | 说明 |
-| --- | --- |
-| `backend/` | Spring Boot 服务、`Dockerfile`、Flyway 迁移 |
-| `frontend-vue/` | Vue 3 应用（Vite） |
-| `Caddyfile` | 反代 `/api`、静态文件与 SPA `try_files` |
-| `docker-compose.yml` | `backend` + `caddy`、数据卷与证书 |
+## 建议的发版检查
 
-## OpenSpec
+前端更新后：
 
-活跃变更与归档见 `openspec/changes/`；主规格见 `openspec/specs/`。
+- 打开首页与登录页
+- 检查 `/api` 请求是否正常
+- 检查手机端页面是否无横向溢出
+
+后端更新后：
+
+- `docker compose logs -f --tail=100 backend`
+- `curl -sSf http://127.0.0.1:8080/healthz`
+- 登录一次，确认读写正常
+
+## 不要这样做
+
+下面这些操作可能影响当前数据库：
+
+- `docker compose down -v`
+- 手工删除 `zero_data` 卷
+- 手工删除容器内 `/data/zero.db`
+- 在未确认 migration 的情况下直接发布结构变更
+
+## 补充说明
+
+- 后端数据库配置见 `backend/src/main/resources/application.yml`
+- 当前 SQLite 连接为 `jdbc:sqlite:${DATABASE_PATH:./data/zero.db}`
+- 生产环境在 Compose 中通过 `DATABASE_PATH=/data/zero.db` 固定到数据卷
+
+如需更完整的 Ubuntu / 域名 / HTTPS / 防火墙说明，请看 [docs/DEPLOYMENT.md](/Users/siyixiong/IdeaProjects/curcor project/zero/docs/DEPLOYMENT.md)。

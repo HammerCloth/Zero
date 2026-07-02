@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Zero · 资产总览 Demo</title>
+    <style>
+      :root {
+        --bg: linear-gradient(180deg, #f4f6f8 0%, #eef2f5 100%);
+        --panel: #ffffff;
+        --line: #d9e0e6;
+        --text: #17212b;
+        --muted: #61707e;
+        --asset-1: #0f766e;
+        --asset-2: #158f83;
+        --asset-3: #2da89a;
+        --asset-4: #66c6ba;
+        --asset-5: #97ddd3;
+        --owner-a: #315c96;
+        --owner-b: #6d8fc5;
+        --shadow: 0 12px 32px rgba(16, 24, 40, 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      }
+
+      .page {
+        width: min(1280px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      .hero,
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 360px);
+        gap: 22px;
+        padding: 28px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fafb;
+        color: #35556f;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      h1 {
+        margin: 16px 0 12px;
+        font-size: clamp(34px, 4vw, 50px);
+        line-height: 1.06;
+        letter-spacing: -0.05em;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      .hero-note {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(180deg, #fbfcfd 0%, #f6f9fb 100%);
+      }
+
+      .hero-note strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      .hero-note span {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .summary {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fff;
+      }
+
+      .card-label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .card-value {
+        margin-top: 10px;
+        font-size: clamp(24px, 2.6vw, 34px);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .card-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .layout {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .panel-head h2 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: -0.03em;
+      }
+
+      .panel-head p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .pill {
+        white-space: nowrap;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fafb;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .trend-svg {
+        width: 100%;
+        height: 260px;
+        display: block;
+      }
+
+      .section-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .allocation-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(21, 143, 131, 0.04), #fff 30%);
+        padding: 18px;
+      }
+
+      .allocation-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .allocation-head strong {
+        font-size: 21px;
+        letter-spacing: -0.03em;
+      }
+
+      .allocation-head span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .capacity-chart {
+        border: 1px solid #e7edf1;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fbfcfd 0%, #f7fafb 100%);
+        padding: 16px;
+      }
+
+      .capacity-visual {
+        position: relative;
+        padding-top: 86px;
+      }
+
+      .capacity-bar {
+        display: flex;
+        width: 100%;
+        height: 24px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #edf3f5;
+        box-shadow: inset 0 0 0 1px rgba(23, 33, 43, 0.04);
+      }
+
+      .capacity-segment {
+        height: 100%;
+        position: relative;
+      }
+
+      .capacity-segment + .capacity-segment {
+        box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.9);
+      }
+
+      .capacity-annotations {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 80px;
+        pointer-events: none;
+      }
+
+      .capacity-annotation {
+        position: absolute;
+        top: 0;
+        transform: translateX(-50%);
+        width: 132px;
+        text-align: center;
+      }
+
+      .capacity-annotation--lower {
+        top: 18px;
+      }
+
+      .capacity-annotation::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 42px;
+        width: 1px;
+        height: 40px;
+        background: rgba(97, 112, 126, 0.45);
+      }
+
+      .capacity-annotation--lower::after {
+        top: 42px;
+        height: 22px;
+      }
+
+      .capacity-annotation strong,
+      .capacity-annotation span {
+        display: block;
+      }
+
+      .capacity-annotation strong {
+        font-size: 11px;
+        line-height: 1.2;
+        color: var(--text);
+      }
+
+      .capacity-annotation span {
+        margin-top: 2px;
+        font-size: 10px;
+        line-height: 1.25;
+        color: var(--muted);
+      }
+
+      .capacity-summary {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .capacity-list {
+        margin-top: 16px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .capacity-item {
+        display: grid;
+        grid-template-columns: 14px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef2f4;
+      }
+
+      .capacity-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .capacity-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+      }
+
+      .capacity-name {
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .capacity-meta {
+        text-align: right;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .subgrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .mini-panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fff;
+        padding: 18px;
+      }
+
+      .mini-panel h3 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .legend {
+        display: grid;
+        gap: 10px;
+      }
+
+      .legend-row {
+        display: grid;
+        grid-template-columns: 12px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+      }
+
+      @media (max-width: 1080px) {
+        .hero,
+        .subgrid {
+          grid-template-columns: 1fr;
+        }
+
+        .summary {
+          grid-template-columns: 1fr;
+        }
+
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          width: min(100vw - 20px, 100%);
+          padding-top: 18px;
+        }
+
+        .hero,
+        .panel {
+          padding: 18px;
+          border-radius: 18px;
+        }
+
+        .capacity-item {
+          grid-template-columns: 14px minmax(0, 1fr);
+        }
+
+        .capacity-meta {
+          grid-column: 2;
+          text-align: left;
+        }
+
+        .capacity-visual {
+          padding-top: 0;
+        }
+
+        .capacity-annotations {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <span class="eyebrow">Project Zero · Demo</span>
+          <h1>资产总览</h1>
+          <p>首屏先看净资产趋势，随后用统一的分段容量条查看资产构成、类型分布和归属分布。整个页面只使用当前系统真实可支撑的账户与余额口径。</p>
+        </div>
+        <div class="hero-note">
+          <strong>展示口径</strong>
+          <span>三块结构图统一采用连续分段容量条，下面配明细列表。这样风格更一致，也更接近系统级产品的容量展示方式。</span>
+        </div>
+      </section>
+
+      <section class="summary">
+        <article class="card">
+          <div class="card-label">总资产</div>
+          <div class="card-value">¥ 5,040,000</div>
+          <div class="card-hint">房产与证券类为主要构成</div>
+        </article>
+        <article class="card">
+          <div class="card-label">账户类型数</div>
+          <div class="card-value">5</div>
+          <div class="card-hint">覆盖房产、证券、现金、基金与其他</div>
+        </article>
+      </section>
+
+      <section class="panel" style="margin-top: 18px">
+        <div class="panel-head">
+          <div>
+            <h2>净资产趋势</h2>
+            <p>优先回答“最近整体是在变好还是变差”，让用户先确认规模变化，再进入结构层阅读。</p>
+          </div>
+          <span class="pill">截至 2026-04</span>
+        </div>
+        <svg class="trend-svg" viewBox="0 0 760 260" role="img" aria-label="净资产趋势示意图">
+          <defs>
+            <linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(21,143,131,0.22)"></stop>
+              <stop offset="100%" stop-color="rgba(21,143,131,0.02)"></stop>
+            </linearGradient>
+          </defs>
+          <line x1="44" y1="28" x2="44" y2="220" stroke="rgba(23,33,43,0.12)" />
+          <line x1="44" y1="220" x2="724" y2="220" stroke="rgba(23,33,43,0.12)" />
+          <path d="M44 220 L44 188 L142 181 L240 173 L338 158 L436 141 L534 127 L632 98 L724 74 L724 220 Z" fill="url(#lineFill)"></path>
+          <path d="M44 188 L142 181 L240 173 L338 158 L436 141 L534 127 L632 98 L724 74" fill="none" stroke="#158f83" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="724" cy="74" r="6" fill="#158f83"></circle>
+          <g fill="#61707e" font-size="12">
+            <text x="44" y="244">2025-11</text>
+            <text x="180" y="244">2025-12</text>
+            <text x="316" y="244">2026-01</text>
+            <text x="452" y="244">2026-02</text>
+            <text x="588" y="244">2026-03</text>
+            <text x="688" y="244">2026-04</text>
+          </g>
+        </svg>
+      </section>
+
+      <section class="layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>资产构成</h2>
+              <p>改为连续分段容量条，让用户先看整体占比，再从下方清单读取精确金额与分类名称。</p>
+            </div>
+            <span class="pill">统一容量视图</span>
+          </div>
+
+          <div class="section-stack">
+            <section class="allocation-card">
+              <div class="allocation-head">
+                <strong>资产构成</strong>
+                <span>总资产 ¥ 5,040,000</span>
+              </div>
+              <div class="capacity-chart">
+                <div class="capacity-visual">
+                  <div id="asset-capacity-annotations" class="capacity-annotations"></div>
+                  <div id="asset-capacity" class="capacity-bar"></div>
+                </div>
+                <div class="capacity-summary">
+                  <span>资产分类占比</span>
+                  <span>100%</span>
+                </div>
+                <div id="asset-capacity-list" class="capacity-list"></div>
+              </div>
+            </section>
+
+            <section class="subgrid">
+              <div class="mini-panel">
+                <h3>按类型分布</h3>
+                <div class="capacity-visual">
+                  <div id="type-capacity-annotations" class="capacity-annotations"></div>
+                  <div id="type-capacity" class="capacity-bar"></div>
+                </div>
+                <div class="capacity-summary">
+                  <span>账户类型分布</span>
+                  <span>100%</span>
+                </div>
+                <div id="type-capacity-list" class="capacity-list"></div>
+              </div>
+              <div class="mini-panel">
+                <h3>按归属分布</h3>
+                <div class="capacity-visual">
+                  <div id="owner-capacity-annotations" class="capacity-annotations"></div>
+                  <div id="owner-capacity" class="capacity-bar"></div>
+                </div>
+                <div class="capacity-summary">
+                  <span>账户归属分布</span>
+                  <span>100%</span>
+                </div>
+                <div id="owner-capacity-list" class="capacity-list"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>图表阅读方式</h2>
+              <p>先看最大面积，再看第二梯队，最后通过横向分布条确认类型与归属是否过度集中。</p>
+            </div>
+          </div>
+          <div class="legend" style="gap: 12px">
+            <div class="card" style="padding: 14px 16px">
+              <strong>主图回答结构</strong>
+              <div class="card-hint" style="margin-top: 6px">连续分段条最适合先看整体组成，再看每个部分的占比关系。</div>
+            </div>
+            <div class="card" style="padding: 14px 16px">
+              <strong>统一视觉语言</strong>
+              <div class="card-hint" style="margin-top: 6px">资产构成、类型分布、归属分布都用同一套容量展示方式，读起来更自然。</div>
+            </div>
+            <div class="card" style="padding: 14px 16px">
+              <strong>移动端可读性更高</strong>
+              <div class="card-hint" style="margin-top: 6px">主图保留一张，辅助图采用短条形，避免在手机上出现多个难读的饼图。</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const assetItems = [
+        { name: '房产', value: 2300000, ratio: 45.6, color: '#0f766e' },
+        { name: '股票 / ETF', value: 1180000, ratio: 23.4, color: '#158f83' },
+        { name: '现金 / 活期', value: 760000, ratio: 15.1, color: '#2da89a' },
+        { name: '基金', value: 520000, ratio: 10.3, color: '#66c6ba' },
+        { name: '黄金 / 其他', value: 280000, ratio: 5.6, color: '#97ddd3' },
+      ];
+
+      const ownerItems = [
+        { name: '共同', value: 2670000, ratio: 53.0, color: '#315c96' },
+        { name: '成员 A', value: 1580000, ratio: 31.3, color: '#5a7db7' },
+        { name: '成员 B', value: 790000, ratio: 15.7, color: '#91acd4' },
+      ];
+
+      function formatMoney(value) {
+        return `¥ ${value.toLocaleString('zh-CN')}`;
+      }
+
+      function renderCapacity(barId, annotationId, listId, items) {
+        const bar = document.getElementById(barId);
+        const annotationRoot = document.getElementById(annotationId);
+        const list = document.getElementById(listId);
+        bar.innerHTML = '';
+        annotationRoot.innerHTML = '';
+        list.innerHTML = '';
+
+        let cursor = 0;
+        let lastCenter = -100;
+        let lastLane = 0;
+        items.forEach((item) => {
+          const segment = document.createElement('div');
+          segment.className = 'capacity-segment';
+          segment.style.width = `${item.ratio}%`;
+          segment.style.background = item.color;
+          bar.appendChild(segment);
+
+          const center = cursor + item.ratio / 2;
+          if (item.ratio >= 8) {
+            const annotation = document.createElement('div');
+            let lane = 0;
+            if (center - lastCenter < 14) {
+              lane = lastLane === 0 ? 1 : 0;
+            }
+            annotation.className = `capacity-annotation${lane === 1 ? ' capacity-annotation--lower' : ''}`;
+            annotation.style.left = `${center}%`;
+            annotation.innerHTML = `
+              <strong>${item.name}</strong>
+              <span>${formatMoney(item.value)} · ${item.ratio}%</span>
+            `;
+            annotationRoot.appendChild(annotation);
+            lastCenter = center;
+            lastLane = lane;
+          }
+          cursor += item.ratio;
+
+          const row = document.createElement('div');
+          row.className = 'capacity-item';
+          row.innerHTML = `
+            <span class="capacity-dot" style="background: ${item.color}"></span>
+            <div class="capacity-name">${item.name}</div>
+            <div class="capacity-meta">${formatMoney(item.value)} · ${item.ratio}%</div>
+          `;
+          list.appendChild(row);
+        });
+      }
+
+      renderCapacity('asset-capacity', 'asset-capacity-annotations', 'asset-capacity-list', assetItems);
+      renderCapacity('type-capacity', 'type-capacity-annotations', 'type-capacity-list', assetItems);
+      renderCapacity('owner-capacity', 'owner-capacity-annotations', 'owner-capacity-list', ownerItems);
+    </script>
+  </body>
+</html>

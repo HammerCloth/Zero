@@ -83,69 +83,136 @@ watch(
 </script>
 
 <template>
-  <n-space vertical size="large">
-    <n-space justify="space-between" align="center">
-      <n-h2 style="margin: 0">快照日历</n-h2>
-      <n-space align="center">
+  <div class="page-stack">
+    <section class="page-header">
+      <div class="page-header__copy">
+        <h2 class="page-header__title">快照日历</h2>
+        <p class="page-header__desc">按月份查看已记录日期。点进已有快照，或直接在空白日期创建新记录。</p>
+      </div>
+      <div class="inline-control">
         <n-button @click="prevMonth">上月</n-button>
-        <span>{{ year }} 年 {{ month + 1 }} 月</span>
+        <strong class="calendar-label">{{ year }} 年 {{ month + 1 }} 月</strong>
         <n-button @click="nextMonth">下月</n-button>
-      </n-space>
-    </n-space>
-    <div class="cal-grid">
-      <div v-for="w in weekDays" :key="w" class="cal-head">{{ w }}</div>
-      <template v-for="(c, i) in cells" :key="i">
-        <div v-if="!c" class="cal-cell cal-empty" />
-        <div
-          v-else
-          class="cal-cell cal-day"
-          :class="{ 'has-snap': snapshotDates.has(c.dateStr) }"
-          @click="onPick(c.dateStr)"
-        >
-          <span class="day-num">{{ c.day }}</span>
-        </div>
-      </template>
-    </div>
+      </div>
+    </section>
+
+    <section class="calendar-shell">
+      <div class="cal-grid">
+        <div v-for="w in weekDays" :key="w" class="cal-head">{{ w }}</div>
+        <template v-for="(c, i) in cells" :key="i">
+          <div v-if="!c" class="cal-cell cal-empty" />
+          <button
+            v-else
+            type="button"
+            class="cal-cell cal-day"
+            :class="{ 'has-snap': snapshotDates.has(c.dateStr) }"
+            @click="onPick(c.dateStr)"
+          >
+            <span class="day-num">{{ c.day }}</span>
+            <span class="day-state">{{ snapshotDates.has(c.dateStr) ? '已记录' : '新建' }}</span>
+          </button>
+        </template>
+      </div>
+    </section>
     <n-text depth="3">点击某日：有快照则进入详情，无快照则新建并预填日期。</n-text>
-  </n-space>
+  </div>
 </template>
 
 <style scoped>
+.calendar-shell {
+  padding: 22px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 251, 248, 0.78));
+  box-shadow: var(--shadow-md);
+}
+
+.calendar-label {
+  min-width: 120px;
+  text-align: center;
+  color: var(--text-1);
+}
+
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  max-width: 560px;
+  gap: 10px;
 }
+
 .cal-head {
   text-align: center;
-  font-size: 12px;
-  opacity: 0.7;
-  padding: 4px;
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 6px;
 }
+
 .cal-cell {
-  min-height: 44px;
-  border-radius: 8px;
-  border: 1px solid var(--n-border-color);
+  min-height: 90px;
+  border-radius: 18px;
+  border: 1px solid var(--line-soft);
 }
+
 .cal-empty {
   border: none;
 }
+
 .cal-day {
   cursor: pointer;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.58);
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    border-color 0.15s;
 }
+
 .cal-day:hover {
-  background: var(--n-color-hover);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
+
 .cal-day.has-snap {
-  border-color: var(--n-color-target);
-  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(31, 143, 120, 0.28);
+  background: linear-gradient(180deg, rgba(31, 143, 120, 0.14), rgba(255, 255, 255, 0.86));
 }
+
 .day-num {
   font-weight: 600;
+  font-size: 18px;
+}
+
+.day-state {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+@media (max-width: 640px) {
+  .calendar-shell {
+    padding: 16px;
+  }
+
+  .cal-grid {
+    gap: 8px;
+  }
+
+  .cal-cell {
+    min-height: 72px;
+    border-radius: 14px;
+  }
+
+  .cal-day {
+    padding: 10px;
+  }
+
+  .day-state {
+    display: none;
+  }
 }
 </style>
