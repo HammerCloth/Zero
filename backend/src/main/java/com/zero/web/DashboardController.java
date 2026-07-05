@@ -36,6 +36,12 @@ public class DashboardController {
     return dashboardService.composition(uid);
   }
 
+  @GetMapping("/type-change")
+  public Map<String, Object> typeChange() {
+    String uid = CurrentUser.require().userId();
+    return dashboardService.typeChange(uid);
+  }
+
   @GetMapping("/monthly-growth")
   public Map<String, Object> monthlyGrowth(@RequestParam(value = "year", required = false) Integer year) {
     String uid = CurrentUser.require().userId();

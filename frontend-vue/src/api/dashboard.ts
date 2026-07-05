@@ -35,6 +35,24 @@ export async function fetchComposition() {
   return data
 }
 
+export interface DashboardTypeChangeItem {
+  type: string
+  latest: number
+  previous: number
+  change: number
+}
+
+export interface DashboardTypeChange {
+  latestDate?: string | null
+  previousDate?: string | null
+  items: DashboardTypeChangeItem[]
+}
+
+export async function fetchTypeChange() {
+  const { data } = await http.get<DashboardTypeChange>('/api/v1/dashboard/type-change')
+  return data
+}
+
 export async function fetchMonthlyGrowth(year?: number) {
   const { data } = await http.get<{
     year: number

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart, SankeyChart } from 'echarts/charts'
 import {
   GridComponent,
   LegendComponent,
@@ -13,8 +13,7 @@ import {
 import VChart from 'vue-echarts'
 import * as accountApi from '@/api/account'
 import * as dashboardApi from '@/api/dashboard'
-import type { AccountTrendSeries, DashboardComposition, MonthlyGrowthPoint } from '@/api/dashboard'
-import * as exportApi from '@/api/export'
+import type { DashboardComposition, DashboardTypeChange } from '@/api/dashboard'
 import { formatMoney } from '@/lib/format'
 import { DIM_ACCOUNT_OWNER, DIM_ACCOUNT_TYPE, useSettingsStore } from '@/stores/settings'
 
@@ -23,6 +22,7 @@ use([
   LineChart,
   PieChart,
   BarChart,
+  SankeyChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
@@ -41,31 +41,18 @@ const summary = ref({
 const range = ref<'3m' | '6m' | '1y' | 'all'>('1y')
 const trendPoints = ref<{ date: string; netWorth: number }[]>([])
 const stackedPoints = ref<{ date: string; byType: Record<string, number> }[]>([])
-const accountTrends = ref<AccountTrendSeries[]>([])
-const accountTypeFilter = ref('')
 
 const composition = ref<DashboardComposition>({
   byType: {},
   byOwner: {},
 })
+const typeChange = ref<DashboardTypeChange>({
+  latestDate: null,
+  previousDate: null,
+  items: [],
+})
 /** 账户 id → 展示名（用于分账户占比图） */
 const accountNameById = ref<Record<string, string>>({})
-const year = ref(new Date().getFullYear())
-const monthly = ref<MonthlyGrowthPoint[]>([])
-
-const typeSelectOptions = computed(() => {
-  const types = new Set(accountTrends.value.map((a) => a.type))
-  return [{ label: '全部类型', value: '' }].concat(
-    [...types].sort().map((t) => ({ label: settings.label(DIM_ACCOUNT_TYPE, t), value: t })),
-  )
-})
-
-const filteredAccountTrends = computed(() => {
-  if (!accountTypeFilter.value) {
-    return accountTrends.value
-  }
-  return accountTrends.value.filter((a) => a.type === accountTypeFilter.value)
-})
 
 const trendOption = computed(() => ({
   tooltip: {
@@ -132,6 +119,67 @@ const ownerPie = computed(() => ({
   ],
 }))
 
+const typeChangeOption = computed(() => {
+  const items = typeChange.value.items.filter((item) => Number.isFinite(item.change))
+  const sorted = [...items].sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: Array<{ dataIndex: number }>) => {
+        const first = params[0]
+        const item = sorted[first?.dataIndex ?? 0]
+        if (!item) {
+          return ''
+        }
+        return [
+          settings.label(DIM_ACCOUNT_TYPE, item.type),
+          `本次：${formatMoney(item.latest)}`,
+          `上次：${formatMoney(item.previous)}`,
+          `变化：${formatMoney(item.change)}`,
+        ].join('<br/>')
+      },
+    },
+    grid: { left: 12, right: 24, top: 24, bottom: 12, containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { formatter: (v: number) => formatAssetAmount(v) },
+    },
+    yAxis: {
+      type: 'category',
+      data: sorted.map((item) => settings.label(DIM_ACCOUNT_TYPE, item.type)),
+      axisLabel: { width: 96, overflow: 'truncate' },
+    },
+    series: [
+      {
+        type: 'bar',
+        data: sorted.map((item) => ({
+          value: item.change,
+          itemStyle: { color: item.change >= 0 ? '#18a058' : '#d03050' },
+        })),
+        label: {
+          show: true,
+          position: (p: { value?: number }) => (Number(p.value ?? 0) >= 0 ? 'right' : 'left'),
+          formatter: (p: { value?: number }) => formatAssetAmount(Number(p.value ?? 0)),
+        },
+      },
+    ],
+  }
+})
+
+const typeChangeHasData = computed(() => Boolean(typeChange.value.previousDate && typeChange.value.items.length))
+
+const typeChangeSummary = computed(() => {
+  const total = typeChange.value.items.reduce((sum, item) => sum + (Number.isFinite(item.change) ? item.change : 0), 0)
+  if (total > 0) {
+    return { label: '净流入', value: total, tone: 'positive' }
+  }
+  if (total < 0) {
+    return { label: '净流出', value: Math.abs(total), tone: 'negative' }
+  }
+  return { label: '净变化', value: 0, tone: 'neutral' }
+})
+
 const palette = [
   '#6366f1',
   '#22c55e',
@@ -142,6 +190,147 @@ const palette = [
   '#eab308',
   '#64748b',
 ]
+
+const sankeyPalette = ['#44c2a0', '#8b90d8', '#df8f68', '#8f79bb', '#5aa6d8', '#d6a33d', '#6d7d8f']
+type SankeyNode = { name: string; labelName: string; raw?: number; itemStyle?: { color: string } }
+type SankeyLink = { source: string; target: string; value: number; raw?: number; labelName: string }
+
+function formatAssetAmount(value: number) {
+  const abs = Math.abs(value)
+  if (abs > 10000) {
+    return `¥${(value / 10000).toFixed(2)}w`
+  }
+  if (abs > 1000) {
+    return `¥${(value / 1000).toFixed(2)}k`
+  }
+  return `¥${value.toFixed(2)}`
+}
+
+const assetSankeyData = computed(() => {
+  const nodes: SankeyNode[] = []
+  const links: SankeyLink[] = []
+  const nodeNames = new Set<string>()
+  const positiveTypes: [string, number][] = []
+
+  function addNode(name: string, labelName: string, color: string, raw?: number) {
+    if (nodeNames.has(name)) {
+      return
+    }
+    nodeNames.add(name)
+    nodes.push({ name, labelName, raw, itemStyle: { color } })
+  }
+
+  for (const [type, value] of Object.entries(composition.value.byType)) {
+    if (!Number.isFinite(value) || value <= 0) {
+      continue
+    }
+    positiveTypes.push([type, value])
+  }
+
+  const totalAssets = positiveTypes.reduce((sum, [, value]) => sum + value, 0)
+
+  addNode('summary:netWorth', '净资产', sankeyPalette[0], summary.value.netWorth)
+  addNode('summary:totalAssets', '总资产', sankeyPalette[1], totalAssets)
+  if (totalAssets > 0) {
+    links.push({
+      source: 'summary:netWorth',
+      target: 'summary:totalAssets',
+      value: totalAssets,
+      raw: totalAssets,
+      labelName: '净资产 → 总资产',
+    })
+  }
+
+  positiveTypes
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([type, value], index) => {
+      const typeName = settings.label(DIM_ACCOUNT_TYPE, type)
+      const typeNodeName = `type:${type}`
+      addNode(typeNodeName, typeName, sankeyPalette[(index + 2) % sankeyPalette.length], value)
+      links.push({
+        source: 'summary:totalAssets',
+        target: typeNodeName,
+        value,
+        raw: value,
+        labelName: `总资产 → ${typeName}`,
+      })
+
+      const accounts = composition.value.byTypeAccounts?.[type] ?? {}
+      Object.entries(accounts)
+        .filter(([, accountValue]) => Number.isFinite(accountValue) && accountValue > 0)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([accountId, accountValue]) => {
+          const accountName = accountNameById.value[accountId] ?? accountId
+          const accountNodeName = `account:${accountId}`
+          addNode(accountNodeName, accountName, sankeyPalette[(index + 3) % sankeyPalette.length], accountValue)
+          links.push({
+            source: typeNodeName,
+            target: accountNodeName,
+            value: accountValue,
+            raw: accountValue,
+            labelName: `${typeName} → ${accountName}`,
+          })
+        })
+    })
+
+  return { nodes, links, totalAssets }
+})
+
+const assetSankeyOption = computed(() => ({
+  tooltip: {
+    trigger: 'item',
+    formatter: (p: {
+      dataType?: string
+      name?: string
+      data?: { raw?: number; value?: number; labelName?: string }
+    }) => {
+      const raw = Number(p.data?.raw ?? p.data?.value ?? 0)
+      if (p.dataType === 'edge') {
+        return `${p.data?.labelName ?? p.name ?? ''}<br/>${formatAssetAmount(raw)}`
+      }
+      if (p.data?.labelName && Number.isFinite(raw)) {
+        return `${p.data.labelName}<br/>${formatAssetAmount(raw)}`
+      }
+      return p.data?.labelName ?? p.name ?? ''
+    },
+  },
+  series: [
+    {
+      type: 'sankey',
+      left: 12,
+      right: 120,
+      top: 18,
+      bottom: 18,
+      nodeWidth: 10,
+      nodeGap: 14,
+      draggable: false,
+      emphasis: { focus: 'adjacency' },
+      lineStyle: {
+        color: 'gradient',
+        curveness: 0.56,
+        opacity: 0.34,
+      },
+      label: {
+        color: '#334155',
+        fontSize: 12,
+        formatter: (p: { name: string; data?: { labelName?: string; raw?: number } }) => {
+          if (p.name === 'summary:netWorth') {
+            return `净资产  ${formatAssetAmount(summary.value.netWorth)}`
+          }
+          if (p.name === 'summary:totalAssets') {
+            return `总资产  ${formatAssetAmount(assetSankeyData.value.totalAssets)}`
+          }
+          if (p.data?.labelName && Number.isFinite(p.data.raw)) {
+            return `${p.data.labelName}  ${formatAssetAmount(Number(p.data.raw))}`
+          }
+          return p.data?.labelName ?? p.name
+        },
+      },
+      data: assetSankeyData.value.nodes,
+      links: assetSankeyData.value.links,
+    },
+  ],
+}))
 
 /** 有分账户数据的类型，供下拉选择 */
 const accountShareTypeOptions = computed(() => {
@@ -262,101 +451,6 @@ const stackedByTypeOption = computed(() => {
   }
 })
 
-const accountTrendOption = computed(() => {
-  const accs = filteredAccountTrends.value.filter((a) => a.points.length)
-  if (!accs.length) {
-    return { xAxis: { type: 'category' as const, data: [] }, yAxis: { type: 'value' as const }, series: [] }
-  }
-  const dateSet = new Set<string>()
-  for (const a of accs) {
-    for (const p of a.points) {
-      dateSet.add(p.date)
-    }
-  }
-  const dates = [...dateSet].sort()
-  const palette = [
-    '#6366f1',
-    '#22c55e',
-    '#f97316',
-    '#ec4899',
-    '#14b8a6',
-    '#a855f7',
-    '#eab308',
-    '#64748b',
-  ]
-  const series = accs.map((a, i) => ({
-    name: a.name,
-    type: 'line' as const,
-    smooth: true,
-    data: dates.map((d) => {
-      const pt = a.points.find((x) => x.date === d)
-      return pt ? pt.balance : null
-    }),
-    itemStyle: { color: palette[i % palette.length] },
-  }))
-  return {
-    tooltip: {
-      trigger: 'axis',
-      valueFormatter: (v: number) => (v == null ? '' : formatMoney(v as number)),
-    },
-    legend: { type: 'scroll', bottom: 0 },
-    xAxis: { type: 'category', data: dates },
-    yAxis: {
-      type: 'value',
-      scale: true,
-      axisLabel: { formatter: (v: number) => formatMoney(v) },
-    },
-    series,
-  }
-})
-
-const monthlyBar = computed(() => {
-  const labels = monthly.value.map((p) => `${year.value}-${p.month}`)
-  const changes = monthly.value.map((p) => p.change)
-  let run = 0
-  const cum = monthly.value.map((p) => {
-    if (p.cumulativeChange != null && !Number.isNaN(p.cumulativeChange)) {
-      return p.cumulativeChange
-    }
-    run += p.change
-    return run
-  })
-  return {
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: labels },
-    yAxis: [
-      {
-        type: 'value',
-        name: '月度变化',
-        axisLabel: { formatter: (v: number) => formatMoney(v) },
-      },
-      {
-        type: 'value',
-        name: '累计',
-        position: 'right',
-        axisLabel: { formatter: (v: number) => formatMoney(v) },
-      },
-    ],
-    series: [
-      {
-        type: 'bar',
-        name: '月度变化',
-        data: changes.map((c) => ({
-          value: c,
-          itemStyle: { color: c >= 0 ? '#18a058' : '#d03050' },
-        })),
-      },
-      {
-        type: 'line',
-        name: '年内累计',
-        yAxisIndex: 1,
-        smooth: true,
-        data: cum,
-      },
-    ],
-  }
-})
-
 async function loadRangeCharts() {
   try {
     const tr = await dashboardApi.fetchTrend(range.value)
@@ -369,12 +463,6 @@ async function loadRangeCharts() {
     stackedPoints.value = st.points
   } catch {
     stackedPoints.value = []
-  }
-  try {
-    const at = await dashboardApi.fetchAccountTrends(range.value)
-    accountTrends.value = at.accounts
-  } catch {
-    accountTrends.value = []
   }
 }
 
@@ -395,8 +483,11 @@ async function load() {
       accountNameById.value = {}
     }
     composition.value = await dashboardApi.fetchComposition()
-    const mg = await dashboardApi.fetchMonthlyGrowth(year.value)
-    monthly.value = mg.points
+    try {
+      typeChange.value = await dashboardApi.fetchTypeChange()
+    } catch {
+      typeChange.value = { latestDate: null, previousDate: null, items: [] }
+    }
   } catch (e) {
     console.error('dashboard load', e)
     message.error('加载仪表盘失败')
@@ -414,71 +505,45 @@ watch(range, async () => {
   }
 })
 
-watch(year, async (y) => {
-  if (y == null) {
-    return
-  }
-  try {
-    const mg = await dashboardApi.fetchMonthlyGrowth(y)
-    monthly.value = mg.points
-  } catch {
-    message.error('加载月度数据失败')
-  }
-})
-
-async function downloadCsv() {
-  try {
-    const { data } = await exportApi.downloadCsv()
-    const blob = new Blob([data], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'zero-export.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  } catch {
-    message.error('导出失败')
-  }
-}
-
 onMounted(load)
 </script>
 
 <template>
   <div class="page-stack">
-    <section class="page-header">
-      <div class="page-header__copy">
-        <h2 class="page-header__title">总览</h2>
-        <p class="page-header__desc">
-          用一个视图同时观察净资产、资产构成、账户走势和年度变化。手机访问时保留关键数字和核心图表，不依赖额外静态素材。
-        </p>
-      </div>
-      <n-button type="primary" @click="downloadCsv">导出 CSV</n-button>
-    </section>
-
     <n-spin :show="loading">
-      <section class="stat-grid">
-        <article class="stat-card">
-          <div class="stat-card__label">净资产</div>
-          <div class="stat-card__value">{{ formatMoney(summary.netWorth) }}</div>
-          <div class="stat-card__hint">当前账户与资产快照汇总</div>
-        </article>
-        <article class="stat-card">
-          <div class="stat-card__label">月度变化</div>
-          <div class="stat-card__value">{{ formatMoney(summary.monthlyChange) }}</div>
-          <div class="stat-card__hint">最近一个统计周期变化</div>
-        </article>
-        <article class="stat-card">
-          <div class="stat-card__label">年度变化</div>
-          <div class="stat-card__value">{{ formatMoney(summary.annualChange) }}</div>
-          <div class="stat-card__hint">当前年度累计增减</div>
-        </article>
-        <article class="stat-card">
-          <div class="stat-card__label">年化收益率</div>
-          <div class="stat-card__value">{{ (summary.annualizedReturn * 100).toFixed(2) }}%</div>
-          <div class="stat-card__hint">按已记录数据估算</div>
-        </article>
-      </section>
+      <n-card class="surface-panel" title="资产全貌">
+        <div class="asset-sankey-summary">
+          <span class="asset-sankey-summary__primary">净资产 {{ formatAssetAmount(summary.netWorth) }}</span>
+        </div>
+        <v-chart
+          v-if="assetSankeyData.links.length"
+          class="chart-frame chart-frame--sankey"
+          :option="assetSankeyOption"
+          autoresize
+        />
+        <n-empty v-else description="暂无资产快照数据" />
+      </n-card>
+
+      <n-card class="surface-panel" title="资金变化">
+        <div class="type-change-summary">
+          <div
+            class="type-change-summary__value"
+            :class="`type-change-summary__value--${typeChangeSummary.tone}`"
+          >
+            {{ typeChangeSummary.label }} {{ formatAssetAmount(typeChangeSummary.value) }}
+          </div>
+          <span v-if="typeChange.latestDate && typeChange.previousDate" class="section-note">
+            {{ typeChange.previousDate }} → {{ typeChange.latestDate }}
+          </span>
+        </div>
+        <v-chart
+          v-if="typeChangeHasData"
+          class="chart-frame--compact"
+          :option="typeChangeOption"
+          autoresize
+        />
+        <n-empty v-else description="暂无可对比的类型变化" />
+      </n-card>
 
       <n-card class="surface-panel" title="净资产趋势">
         <div class="table-toolbar" style="margin-bottom: 12px">
@@ -498,26 +563,6 @@ onMounted(load)
         <span class="section-note" style="display: block; margin-bottom: 8px">与上方时间范围一致</span>
         <v-chart v-if="stackedPoints.length" class="chart-frame" :option="stackedByTypeOption" autoresize />
         <n-empty v-else description="暂无数据" />
-      </n-card>
-
-      <n-card class="surface-panel" title="账户余额趋势">
-        <div class="inline-control" style="margin-bottom: 12px">
-          <span class="section-note">筛选类型</span>
-          <n-select
-            v-model:value="accountTypeFilter"
-            :options="typeSelectOptions"
-            style="width: min(220px, 100%)"
-            clearable
-            placeholder="全部"
-          />
-        </div>
-        <v-chart
-          v-if="filteredAccountTrends.some((a) => a.points.length)"
-          class="chart-frame"
-          :option="accountTrendOption"
-          autoresize
-        />
-        <n-empty v-else description="暂无账户或快照数据" />
       </n-card>
 
       <section class="section-grid section-grid--two">
@@ -562,14 +607,6 @@ onMounted(load)
         <n-empty v-else description="该类型下暂无可展示的账户余额" />
       </n-card>
 
-      <n-card class="surface-panel" title="月度净资产变化">
-        <div class="inline-control" style="margin-bottom: 12px">
-          <span class="section-note">统计年份</span>
-          <n-input-number v-model:value="year" :min="2000" :max="2100" />
-        </div>
-        <v-chart v-if="monthly.length" class="chart-frame--compact" :option="monthlyBar" autoresize />
-        <n-empty v-else />
-      </n-card>
     </n-spin>
   </div>
 </template>

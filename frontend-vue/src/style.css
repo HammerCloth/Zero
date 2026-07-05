@@ -327,8 +327,50 @@ select {
   min-height: 320px;
 }
 
+.chart-frame--sankey {
+  min-height: 420px;
+}
+
 .chart-frame--compact {
   min-height: 300px;
+}
+
+.asset-sankey-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.asset-sankey-summary__primary {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.type-change-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.type-change-summary__value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.type-change-summary__value--positive {
+  color: #18a058;
+}
+
+.type-change-summary__value--negative {
+  color: #d03050;
 }
 
 .login-shell {

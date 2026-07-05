@@ -177,6 +177,52 @@ public class DashboardService {
     return out;
   }
 
+  public Map<String, Object> typeChange(String userId) {
+    List<Snapshot> desc = snapshotMapper.listSnapshotsByUser(userId);
+    if (desc.size() < 2) {
+      Map<String, Object> empty = new LinkedHashMap<>();
+      empty.put("latestDate", desc.isEmpty() ? null : desc.get(0).getDate());
+      empty.put("previousDate", null);
+      empty.put("items", List.of());
+      return empty;
+    }
+    Map<String, Account> accounts = accountsById(userId);
+    Snapshot latest = desc.get(0);
+    Snapshot previous = desc.get(1);
+    Map<String, Double> latestByType = compositionByTypeForSnapshot(latest.getId(), accounts);
+    Map<String, Double> previousByType = compositionByTypeForSnapshot(previous.getId(), accounts);
+    List<String> types = new ArrayList<>();
+    for (String type : latestByType.keySet()) {
+      if (!types.contains(type)) {
+        types.add(type);
+      }
+    }
+    for (String type : previousByType.keySet()) {
+      if (!types.contains(type)) {
+        types.add(type);
+      }
+    }
+    types.sort(String::compareTo);
+
+    List<Map<String, Object>> items = new ArrayList<>();
+    for (String type : types) {
+      double latestValue = latestByType.getOrDefault(type, 0.0);
+      double previousValue = previousByType.getOrDefault(type, 0.0);
+      Map<String, Object> row = new LinkedHashMap<>();
+      row.put("type", type);
+      row.put("latest", latestValue);
+      row.put("previous", previousValue);
+      row.put("change", latestValue - previousValue);
+      items.add(row);
+    }
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("latestDate", latest.getDate());
+    out.put("previousDate", previous.getDate());
+    out.put("items", items);
+    return out;
+  }
+
   public Map<String, Object> monthlyGrowth(String userId, Integer year) {
     int y = year != null ? year : LocalDate.now().getYear();
     List<Snapshot> desc = snapshotMapper.listSnapshotsByUser(userId);
