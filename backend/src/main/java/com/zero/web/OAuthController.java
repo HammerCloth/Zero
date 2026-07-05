@@ -136,8 +136,8 @@ public class OAuthController {
             h1 { margin: 0 0 8px; font-size: 22px; }
             p { margin: 0 0 22px; color: #667085; line-height: 1.6; }
             label { display: block; margin: 14px 0 6px; font-size: 13px; color: #475467; }
-            input { width: 100%; box-sizing: border-box; border: 1px solid #d0d5dd; border-radius: 6px; padding: 10px 12px; font-size: 15px; }
-            button { width: 100%; margin-top: 20px; border: 0; border-radius: 6px; padding: 11px 14px; background: #1f6feb; color: white; font-weight: 600; cursor: pointer; }
+            input { width: 100%%; box-sizing: border-box; border: 1px solid #d0d5dd; border-radius: 6px; padding: 10px 12px; font-size: 15px; }
+            button { width: 100%%; margin-top: 20px; border: 0; border-radius: 6px; padding: 11px 14px; background: #1f6feb; color: white; font-weight: 600; cursor: pointer; }
             .scope { margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 6px; font-size: 13px; color: #475467; }
             .error { color: #b42318; }
           </style>
