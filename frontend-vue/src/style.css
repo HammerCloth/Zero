@@ -366,11 +366,21 @@ select {
 }
 
 .type-change-summary__value--positive {
-  color: #18a058;
+  color: #3fb68b;
 }
 
 .type-change-summary__value--negative {
-  color: #d03050;
+  color: #d86a62;
+}
+
+@media (max-width: 640px) {
+  .chart-frame--sankey {
+    min-height: 300px;
+  }
+
+  .asset-sankey-summary__primary {
+    font-size: 18px;
+  }
 }
 
 .login-shell {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -32,6 +32,7 @@ use([
 const message = useMessage()
 const settings = useSettingsStore()
 const loading = ref(true)
+const isMobileChart = ref(false)
 const summary = ref({
   netWorth: 0,
   monthlyChange: 0,
@@ -122,6 +123,13 @@ const ownerPie = computed(() => ({
 const typeChangeOption = computed(() => {
   const items = typeChange.value.items.filter((item) => Number.isFinite(item.change))
   const sorted = [...items].sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+  const values = sorted.map((item) => item.change)
+  const maxValue = Math.max(0, ...values)
+  const minValue = Math.min(0, ...values)
+  const span = Math.max(maxValue - minValue, Math.max(Math.abs(maxValue), Math.abs(minValue)), 1)
+  const padding = span * 0.18
+  const positiveColor = '#3fb68b'
+  const negativeColor = '#d86a62'
   return {
     tooltip: {
       trigger: 'axis',
@@ -140,27 +148,80 @@ const typeChangeOption = computed(() => {
         ].join('<br/>')
       },
     },
-    grid: { left: 12, right: 24, top: 24, bottom: 12, containLabel: true },
-    xAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => formatAssetAmount(v) },
+    grid: {
+      left: 12,
+      right: 12,
+      top: 48,
+      bottom: isMobileChart.value ? 60 : 36,
+      containLabel: true,
     },
-    yAxis: {
+    xAxis: {
       type: 'category',
       data: sorted.map((item) => settings.label(DIM_ACCOUNT_TYPE, item.type)),
-      axisLabel: { width: 96, overflow: 'truncate' },
+      axisLabel: {
+        interval: 0,
+        rotate: isMobileChart.value ? 34 : 0,
+        width: isMobileChart.value ? 56 : 96,
+        overflow: 'truncate',
+      },
+    },
+    yAxis: {
+      type: 'value',
+      max: maxValue + padding,
+      min: minValue - padding,
+      axisLabel: { formatter: (v: number) => formatAssetAmount(v) },
+      splitLine: { lineStyle: { color: '#e5e7eb' } },
     },
     series: [
       {
+        name: '流入',
         type: 'bar',
+        clip: false,
+        barMaxWidth: 34,
         data: sorted.map((item) => ({
-          value: item.change,
-          itemStyle: { color: item.change >= 0 ? '#18a058' : '#d03050' },
+          value: item.change > 0 ? item.change : null,
+          itemStyle: {
+            color: positiveColor,
+            borderRadius: [4, 4, 0, 0],
+          },
         })),
         label: {
           show: true,
-          position: (p: { value?: number }) => (Number(p.value ?? 0) >= 0 ? 'right' : 'left'),
-          formatter: (p: { value?: number }) => formatAssetAmount(Number(p.value ?? 0)),
+          position: 'top',
+          verticalAlign: 'bottom',
+          distance: 10,
+          color: '#475569',
+          fontSize: isMobileChart.value ? 10 : 11,
+          formatter: (p: { value?: number }) => {
+            const value = Number(p.value ?? 0)
+            return value > 0 ? formatAssetAmount(value) : ''
+          },
+        },
+      },
+      {
+        name: '流出',
+        type: 'bar',
+        clip: false,
+        barGap: '-100%',
+        barMaxWidth: 34,
+        data: sorted.map((item) => ({
+          value: item.change < 0 ? item.change : null,
+          itemStyle: {
+            color: negativeColor,
+            borderRadius: [0, 0, 4, 4],
+          },
+        })),
+        label: {
+          show: true,
+          position: 'bottom',
+          verticalAlign: 'top',
+          distance: 10,
+          color: '#475569',
+          fontSize: isMobileChart.value ? 10 : 11,
+          formatter: (p: { value?: number }) => {
+            const value = Number(p.value ?? 0)
+            return value < 0 ? formatAssetAmount(value) : ''
+          },
         },
       },
     ],
@@ -206,6 +267,10 @@ function formatAssetAmount(value: number) {
   return `¥${value.toFixed(2)}`
 }
 
+function compactLabelName(name: string, maxLength: number) {
+  return name.length > maxLength ? `${name.slice(0, maxLength)}...` : name
+}
+
 const assetSankeyData = computed(() => {
   const nodes: SankeyNode[] = []
   const links: SankeyLink[] = []
@@ -229,17 +294,7 @@ const assetSankeyData = computed(() => {
 
   const totalAssets = positiveTypes.reduce((sum, [, value]) => sum + value, 0)
 
-  addNode('summary:netWorth', '净资产', sankeyPalette[0], summary.value.netWorth)
   addNode('summary:totalAssets', '总资产', sankeyPalette[1], totalAssets)
-  if (totalAssets > 0) {
-    links.push({
-      source: 'summary:netWorth',
-      target: 'summary:totalAssets',
-      value: totalAssets,
-      raw: totalAssets,
-      labelName: '净资产 → 总资产',
-    })
-  }
 
   positiveTypes
     .sort((a, b) => b[1] - a[1])
@@ -297,12 +352,12 @@ const assetSankeyOption = computed(() => ({
   series: [
     {
       type: 'sankey',
-      left: 12,
-      right: 120,
-      top: 18,
-      bottom: 18,
-      nodeWidth: 10,
-      nodeGap: 14,
+      left: isMobileChart.value ? 2 : 12,
+      right: isMobileChart.value ? 96 : 176,
+      top: isMobileChart.value ? 8 : 18,
+      bottom: isMobileChart.value ? 8 : 18,
+      nodeWidth: isMobileChart.value ? 6 : 10,
+      nodeGap: isMobileChart.value ? 8 : 14,
       draggable: false,
       emphasis: { focus: 'adjacency' },
       lineStyle: {
@@ -312,16 +367,26 @@ const assetSankeyOption = computed(() => ({
       },
       label: {
         color: '#334155',
-        fontSize: 12,
+        fontSize: isMobileChart.value ? 9 : 12,
+        lineHeight: isMobileChart.value ? 12 : 16,
+        width: isMobileChart.value ? 74 : undefined,
+        overflow: isMobileChart.value ? 'truncate' : undefined,
         formatter: (p: { name: string; data?: { labelName?: string; raw?: number } }) => {
-          if (p.name === 'summary:netWorth') {
-            return `净资产  ${formatAssetAmount(summary.value.netWorth)}`
-          }
           if (p.name === 'summary:totalAssets') {
             return `总资产  ${formatAssetAmount(assetSankeyData.value.totalAssets)}`
           }
           if (p.data?.labelName && Number.isFinite(p.data.raw)) {
-            return `${p.data.labelName}  ${formatAssetAmount(Number(p.data.raw))}`
+            if (isMobileChart.value) {
+              const raw = Number(p.data.raw)
+              const isLeafAccount = p.name.startsWith('account:')
+              const isSmallLeaf = isLeafAccount && raw / Math.max(assetSankeyData.value.totalAssets, 1) < 0.08
+              if (isSmallLeaf) {
+                return p.data.labelName
+              }
+              return `${p.data.labelName}\n${formatAssetAmount(Number(p.data.raw))}`
+            }
+            const labelName = p.name.startsWith('account:') ? compactLabelName(p.data.labelName, 8) : p.data.labelName
+            return `${labelName}  ${formatAssetAmount(Number(p.data.raw))}`
           }
           return p.data?.labelName ?? p.name
         },
@@ -505,7 +570,18 @@ watch(range, async () => {
   }
 })
 
+function updateMobileChart() {
+  isMobileChart.value = window.matchMedia('(max-width: 640px)').matches
+}
+
 onMounted(load)
+onMounted(() => {
+  updateMobileChart()
+  window.addEventListener('resize', updateMobileChart)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateMobileChart)
+})
 </script>
 
 <template>
