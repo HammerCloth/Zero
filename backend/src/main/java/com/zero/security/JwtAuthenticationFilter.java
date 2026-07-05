@@ -29,7 +29,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (header != null && header.startsWith("Bearer ")) {
       String token = header.substring(7).trim();
       try {
-        var claims = jwtService.parseAccessToken(token);
+        var claims =
+            request.getRequestURI().startsWith("/mcp")
+                ? jwtService.parseMcpAccessToken(token)
+                : jwtService.parseAccessToken(token);
         String uid = claims.getSubject();
         boolean admin = Boolean.TRUE.equals(claims.get("is_admin"));
         var principal = new JwtPrincipal(uid, admin);

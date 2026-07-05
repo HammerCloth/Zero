@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -42,10 +43,41 @@ public class SecurityConfig {
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.csrf(csrf -> csrf.disable())
         .cors(c -> c.configurationSource(corsConfigurationSource()))
+        .exceptionHandling(
+            e ->
+                e.authenticationEntryPoint(
+                    (request, response, authException) -> {
+                      if (request.getRequestURI().startsWith("/mcp")) {
+                        String proto =
+                            request.getHeader("X-Forwarded-Proto") == null
+                                ? request.getScheme()
+                                : request.getHeader("X-Forwarded-Proto");
+                        String host =
+                            request.getHeader("X-Forwarded-Host") == null
+                                ? request.getHeader("Host")
+                                : request.getHeader("X-Forwarded-Host");
+                        response.setHeader(
+                            "WWW-Authenticate",
+                            "Bearer resource_metadata=\""
+                                + proto
+                                + "://"
+                                + host
+                                + "/.well-known/oauth-protected-resource\"");
+                      }
+                      response.sendError(HttpStatus.UNAUTHORIZED.value());
+                    }))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers("/healthz")
+                    .permitAll()
+                    .requestMatchers(
+                        "/.well-known/oauth-protected-resource",
+                        "/.well-known/oauth-authorization-server",
+                        "/oauth/authorize",
+                        "/oauth/token",
+                        "/oauth/register",
+                        "/oauth/revoke")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/status")
                     .permitAll()
@@ -53,6 +85,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout")
                     .permitAll()
+                    .requestMatchers("/mcp")
+                    .authenticated()
                     .requestMatchers("/api/**")
                     .authenticated()
                     .anyRequest()

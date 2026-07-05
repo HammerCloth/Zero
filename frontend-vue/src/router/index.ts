@@ -59,6 +59,11 @@ const router = createRouter({
           component: () => import('@/views/SettingsPage.vue'),
         },
         {
+          path: 'ai-clients',
+          name: 'ai-clients',
+          component: () => import('@/views/AiClientsPage.vue'),
+        },
+        {
           path: 'snapshots/:id',
           name: 'snapshot-detail',
           component: () => import('@/views/SnapshotDetailPage.vue'),

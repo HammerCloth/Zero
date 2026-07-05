@@ -1,6 +1,7 @@
 package com.zero.service;
 
 import com.zero.domain.Account;
+import com.zero.domain.MajorFinancialEvent;
 import com.zero.domain.Snapshot;
 import com.zero.domain.SnapshotEvent;
 import com.zero.domain.SnapshotItem;
@@ -85,6 +86,24 @@ public class SnapshotService {
       out.put("snapshot", Map.of("id", sid, "date", date));
     }
     return out;
+  }
+
+  public Map<String, Object> getDetailForDate(String userId, String date) {
+    parseDate(date);
+    String sid = snapshotMapper.findSnapshotIdByUserAndDate(userId, date);
+    if (sid == null) {
+      return Map.of("snapshot", null);
+    }
+    return Map.of("snapshot", getDetail(userId, sid));
+  }
+
+  public Map<String, Object> listMajorEvents(String userId, String fromDate, String toDate, Integer limit) {
+    parseDate(fromDate);
+    parseDate(toDate);
+    int n = limit == null ? 50 : Math.max(1, Math.min(limit, 200));
+    List<MajorFinancialEvent> events =
+        snapshotMapper.listMajorEventsBySnapshotDate(userId, fromDate, toDate, n);
+    return Map.of("events", events);
   }
 
   public Map<String, Object> listDatesInRange(String userId, String from, String to) {
@@ -247,6 +266,7 @@ public class SnapshotService {
     snap.put("note", s.getNote());
     snap.put("createdAt", s.getCreatedAt());
     snap.put("createdBy", s.getCreatedBy());
+    snap.put("netWorth", BalanceLogic.netWorth(items, accounts));
     snap.put("items", itemViews);
     snap.put("events", eventViews);
     return snap;

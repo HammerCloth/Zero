@@ -2,6 +2,7 @@ package com.zero.mapper;
 
 import com.zero.domain.EventCategoryCount;
 import com.zero.domain.EventCategoryStat;
+import com.zero.domain.MajorFinancialEvent;
 import com.zero.domain.Snapshot;
 import com.zero.domain.SnapshotEvent;
 import com.zero.domain.SnapshotItem;
@@ -96,4 +97,15 @@ public interface SnapshotMapper {
       "SELECT COUNT(*) FROM events e INNER JOIN snapshots s ON e.snapshot_id = s.id "
           + "WHERE s.user_id = #{userId} AND e.category = #{category}")
   int countEventsByUserAndCategory(@Param("userId") String userId, @Param("category") String category);
+
+  @Select(
+      "SELECT e.id, s.date AS date, e.category, e.description, e.amount "
+          + "FROM events e INNER JOIN snapshots s ON e.snapshot_id = s.id "
+          + "WHERE s.user_id = #{userId} AND s.date >= #{fromDate} AND s.date <= #{toDate} "
+          + "ORDER BY s.date DESC, e.created_at DESC LIMIT #{limit}")
+  List<MajorFinancialEvent> listMajorEventsBySnapshotDate(
+      @Param("userId") String userId,
+      @Param("fromDate") String fromDate,
+      @Param("toDate") String toDate,
+      @Param("limit") int limit);
 }

@@ -22,26 +22,43 @@ public class JwtService {
     return buildToken(userId, isAdmin, "access", props.accessSecret(), props.accessTtlSeconds() * 1000);
   }
 
+  public String generateMcpAccessToken(String userId, boolean isAdmin, String scope) {
+    return buildToken(
+        userId, isAdmin, "mcp_access", props.accessSecret(), props.accessTtlSeconds() * 1000, scope);
+  }
+
   public String generateRefreshToken(String userId, boolean isAdmin) {
     return buildToken(userId, isAdmin, "refresh", props.refreshSecret(), props.refreshTtlSeconds() * 1000);
   }
 
   private String buildToken(String userId, boolean isAdmin, String type, String secret, long ttlMs) {
+    return buildToken(userId, isAdmin, type, secret, ttlMs, null);
+  }
+
+  private String buildToken(
+      String userId, boolean isAdmin, String type, String secret, long ttlMs, String scope) {
     long now = System.currentTimeMillis();
     SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    return Jwts.builder()
+    var builder =
+        Jwts.builder()
         .subject(userId)
         .claim("user_id", userId)
         .claim("is_admin", isAdmin)
         .claim("type", type)
         .issuedAt(new Date(now))
-        .expiration(new Date(now + ttlMs))
-        .signWith(key)
-        .compact();
+        .expiration(new Date(now + ttlMs));
+    if (scope != null && !scope.isBlank()) {
+      builder.claim("scope", scope);
+    }
+    return builder.signWith(key).compact();
   }
 
   public Claims parseAccessToken(String token) {
     return parse(token, props.accessSecret(), "access");
+  }
+
+  public Claims parseMcpAccessToken(String token) {
+    return parse(token, props.accessSecret(), "mcp_access");
   }
 
   public Claims parseRefreshToken(String token) {

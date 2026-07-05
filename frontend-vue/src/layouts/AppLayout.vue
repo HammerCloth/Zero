@@ -45,6 +45,7 @@ const menuOptions = computed<MenuOption[]>(() => {
     { label: '快照', key: '/snapshots' },
     { label: '账户', key: '/accounts' },
     { label: '大事记', key: '/events' },
+    { label: 'AI 客户端', key: '/ai-clients' },
     { label: '设置', key: '/settings' },
   ]
   if (auth.isAdmin) {
@@ -61,6 +62,9 @@ const activeKey = computed(() => {
   if (p.startsWith('/settings')) {
     return '/settings'
   }
+  if (p.startsWith('/ai-clients')) {
+    return '/ai-clients'
+  }
   return p
 })
 
@@ -74,6 +78,8 @@ const pageTitle = computed(() => {
       return '账户管理'
     case '/events':
       return '年度支出观察'
+    case '/ai-clients':
+      return 'AI 客户端'
     case '/settings':
       return '系统设置'
     case '/users':
