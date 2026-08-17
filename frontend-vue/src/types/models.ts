@@ -56,3 +56,30 @@ export interface DashboardSummary {
   annualizedReturn: number
 }
 
+export interface GiftRecipient {
+  id: string
+  user_id: string
+  name: string
+  relationship?: string | null
+  note?: string | null
+  is_active: boolean
+  gift_count: number
+  gift_total: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface GiftRecord {
+  id: string
+  user_id: string
+  gift_recipient_id: string
+  recipient_name: string
+  recipient_relationship?: string | null
+  occasion: string
+  gift_date: string
+  amount: number
+  payment_method?: string | null
+  note?: string | null
+  created_at?: string
+  updated_at?: string
+}

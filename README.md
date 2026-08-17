@@ -54,6 +54,24 @@ cd frontend-vue
 npm run build
 ```
 
+## 礼金簿
+
+网页端的“礼金”页面用于记录自己实际承担的礼金支出，不与资产快照或大事记混用，因此不会重复影响账户余额或净资产统计。
+
+- 先维护可枚举的礼金对象；每条记录通过对象 ID 关联历史，而不是依赖手工输入姓名。
+- 每笔记录包含对象、关系、场合、日期、实际承担金额、支付方式与备注。
+- 支持按年度查看支出、笔数、涉及对象和按场合统计；可查看某一对象的完整往来历史。
+- 已有关联记录的对象采用“停用”而非删除，确保历史记录不丢失。
+
+该功能由 Flyway 迁移 `V4__gift_records.sql` 创建以下表：
+
+```text
+gift_recipients
+gift_records
+```
+
+线上发布包含此功能时，后端启动会自动执行 V4 迁移；发布前仍建议备份数据库。
+
 ## MCP 与 AI 客户端授权
 
 后端提供远程 MCP endpoint：
@@ -102,7 +120,7 @@ DELETE /api/v1/oauth/authorizations/{id}
 DELETE /api/v1/oauth/authorizations
 ```
 
-本次功能新增 Flyway 迁移 `V3__oauth_mcp.sql`，会创建：
+MCP 授权功能对应 Flyway 迁移 `V3__oauth_mcp.sql`，会创建：
 
 ```text
 oauth_clients
