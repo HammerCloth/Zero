@@ -307,6 +307,34 @@ docker compose up -d --build
 GIT_PULL=1 ./scripts/deploy.sh
 ```
 
+### 4. 用 GitHub Actions 自动部署
+
+GitHub 不会直接跑你的阿里云机器，但可以在 push 之后 SSH 登录服务器，执行和上面相同的 `deploy.sh`。
+
+在仓库 **Settings → Secrets and variables → Actions** 里添加这些 **Secrets**：
+
+| Name | 含义 | 示例 |
+|------|------|------|
+| `DEPLOY_HOST` | 服务器公网 IP 或域名 | `47.x.x.x` |
+| `DEPLOY_USER` | SSH 用户名 | `root` |
+| `DEPLOY_SSH_KEY` | 能登录该用户的 **私钥** 全文 | `-----BEGIN OPENSSH PRIVATE KEY----- ...` |
+| `DEPLOY_PATH` | 服务器上仓库根目录（有 `docker-compose.yml` 的那层） | `/opt/Zero` |
+
+本机生成一把专用密钥（不要用你日常登录电脑的那把）：
+
+```bash
+ssh-keygen -t ed25519 -C "github-deploy" -f ./zero-deploy -N ""
+```
+
+把 `zero-deploy.pub` 追加到服务器 `~/.ssh/authorized_keys`，把 `zero-deploy` 私钥全文贴进 `DEPLOY_SSH_KEY`。本地这两份文件用完可以删。
+
+配好后：
+
+1. 打开 GitHub 仓库 **Actions → deploy → Run workflow**，先手动跑一次确认能更新线上。
+2. 若希望以后每次 push `main` 都自动发版，再在 **Settings → Secrets and variables → Actions → Variables** 加 `ENABLE_AUTO_DEPLOY` = `true`。
+
+服务器防火墙 / 安全组需要放行 GitHub Actions 出口 IP 的 22 端口，或至少允许你当前这台机器的 SSH。若 SSH 只白名单了你家 IP，需要把 GitHub 的网段也放行，或改成走固定跳板。
+
 ## 建议的发版检查
 
 前端更新后：
