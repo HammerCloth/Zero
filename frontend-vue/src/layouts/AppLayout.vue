@@ -46,6 +46,7 @@ const menuOptions = computed<MenuOption[]>(() => {
     { label: '账户', key: '/accounts' },
     { label: '大事记', key: '/events' },
     { label: '礼金', key: '/gifts' },
+    { label: '借款', key: '/loans' },
     { label: 'AI 客户端', key: '/ai-clients' },
     { label: '设置', key: '/settings' },
   ]
@@ -69,6 +70,9 @@ const activeKey = computed(() => {
   if (p.startsWith('/gifts')) {
     return '/gifts'
   }
+  if (p.startsWith('/loans')) {
+    return '/loans'
+  }
   return p
 })
 
@@ -84,6 +88,8 @@ const pageTitle = computed(() => {
       return '年度支出观察'
     case '/gifts':
       return '礼金'
+    case '/loans':
+      return '借款'
     case '/ai-clients':
       return 'AI 客户端'
     case '/settings':

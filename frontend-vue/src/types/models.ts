@@ -83,3 +83,31 @@ export interface GiftRecord {
   created_at?: string
   updated_at?: string
 }
+
+export interface LoanRepayment {
+  id: string
+  user_id: string
+  loan_id: string
+  amount: number
+  repay_date: string
+  note?: string | null
+  created_at?: string
+}
+
+export interface Loan {
+  id: string
+  user_id: string
+  borrower_name: string
+  relationship?: string | null
+  amount: number
+  loan_date: string
+  due_date?: string | null
+  note?: string | null
+  repaid_total: number
+  remaining: number
+  repayment_count: number
+  settled: boolean
+  created_at?: string
+  updated_at?: string
+  repayments?: LoanRepayment[]
+}

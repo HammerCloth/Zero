@@ -91,6 +91,11 @@ const router = createRouter({
           component: () => import('@/views/GiftsPage.vue'),
         },
         {
+          path: 'loans',
+          name: 'loans',
+          component: () => import('@/views/LoansPage.vue'),
+        },
+        {
           path: 'users',
           name: 'users',
           component: () => import('@/views/UsersPage.vue'),
