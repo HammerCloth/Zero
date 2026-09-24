@@ -330,7 +330,7 @@ ssh-keygen -t ed25519 -C "github-deploy" -f ./zero-deploy -N ""
 
 配好后：
 
-1. 打开 GitHub 仓库 **Actions → deploy → Run workflow**，先手动跑一次确认能更新线上。
+1. 打开 GitHub 仓库 **Actions → CI → Run workflow**，先手动跑一次确认能更新线上。
 2. 若希望以后每次 push `main` 都自动发版，再在 **Settings → Secrets and variables → Actions → Variables** 加 `ENABLE_AUTO_DEPLOY` = `true`。
 
 服务器防火墙 / 安全组需要放行 GitHub Actions 出口 IP 的 22 端口，或至少允许你当前这台机器的 SSH。若 SSH 只白名单了你家 IP，需要把 GitHub 的网段也放行，或改成走固定跳板。
