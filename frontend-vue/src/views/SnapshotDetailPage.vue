@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
@@ -16,7 +16,8 @@ const settings = useSettingsStore()
 const snap = ref<SnapshotDetail | null>(null)
 const loading = ref(true)
 
-const id = route.params.id as string
+const id = computed(() => String(route.params.id ?? ''))
+const eventRows = computed(() => snap.value?.events ?? [])
 
 const itemColumns: DataTableColumns = [
   { title: '账户', key: 'accountName' },
@@ -74,19 +75,28 @@ const eventColumns: DataTableColumns = [
   },
 ]
 
-onMounted(async () => {
-  try {
-    await settings.load()
-    snap.value = await snapshotApi.getSnapshot(id)
-  } catch {
-    message.error('加载失败')
-  } finally {
-    loading.value = false
-  }
-})
+watch(
+  id,
+  async (next) => {
+    if (!next) {
+      return
+    }
+    loading.value = true
+    try {
+      await settings.load()
+      snap.value = await snapshotApi.getSnapshot(next)
+    } catch {
+      message.error('加载失败')
+      snap.value = null
+    } finally {
+      loading.value = false
+    }
+  },
+  { immediate: true },
+)
 
 function onEdit() {
-  router.push(`/snapshots/${id}/edit`)
+  router.push(`/snapshots/${id.value}/edit`)
 }
 
 function onDelete() {
@@ -96,7 +106,7 @@ function onDelete() {
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
-      await snapshotApi.deleteSnapshot(id)
+      await snapshotApi.deleteSnapshot(id.value)
       message.success('已删除')
       await router.replace('/snapshots')
     },
@@ -129,18 +139,27 @@ function onDelete() {
         </div>
       </div>
 
-      <section class="page-stack" style="gap: 12px">
+      <section class="detail-block">
         <h3 class="section-title">账户余额</h3>
         <div class="data-table-shell">
-          <n-data-table :columns="itemColumns" :data="snap.items" />
+          <n-data-table
+            :columns="itemColumns"
+            :data="snap.items ?? []"
+            :row-key="(row: { accountId?: string }) => row.accountId ?? ''"
+          />
         </div>
       </section>
 
-      <section class="page-stack" style="gap: 12px">
+      <section class="detail-block">
         <h3 class="section-title">大事记</h3>
-        <div class="data-table-shell">
-          <n-data-table :columns="eventColumns" :data="snap.events" />
+        <div v-if="eventRows.length" class="data-table-shell">
+          <n-data-table
+            :columns="eventColumns"
+            :data="eventRows"
+            :row-key="(row: { id?: string }) => row.id ?? ''"
+          />
         </div>
+        <n-empty v-else description="这次快照还没有大事记" />
       </section>
     </div>
   </n-spin>

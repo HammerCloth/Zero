@@ -105,8 +105,17 @@ async function submit() {
     message.error('请为每个账户填写余额')
     return
   }
+  const incomplete = events.value.some((e) => {
+    const hasText = Boolean(e.description?.trim())
+    const hasAmount = e.absAmount != null && !Number.isNaN(e.absAmount) && e.absAmount > 0
+    return (hasText && !hasAmount) || (hasAmount && !hasText)
+  })
+  if (incomplete) {
+    message.error('请把大事记的说明和金额都填完整')
+    return
+  }
   const evs = events.value
-    .filter((e) => e.description.trim())
+    .filter((e) => e.description?.trim())
     .map((e) => ({
       category: e.category,
       description: e.description.trim(),
